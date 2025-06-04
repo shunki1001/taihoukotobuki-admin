@@ -1,34 +1,45 @@
-import NextAuth from "next-auth";
+// app/api/auth/[...nextauth]/route.ts
+
+import NextAuth, { AuthOptions } from "next-auth"; // AuthOptions をインポート
 import GoogleProvider from "next-auth/providers/google";
 
-export const authOptions = {
-  // Configure one or more authentication providers
+export const authOptions: AuthOptions = { // 型を明示
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
     }),
-    // ...add more providers here
   ],
-  // callbacks: { // 必要に応じてコールバックをカスタマイズ
-  //   async signIn({ user, account, profile, email, credentials }) {
-  //     // 特定のドメインのユーザーのみ許可する場合など
-  //     // if (account?.provider === "google" && profile?.email?.endsWith("@example.com")) {
-  //     //   return true;
-  //     // }
-  //     // return false; // またはエラーをスロー
-  //     return true;
-  //   },
-  //   async session({ session, token, user }) {
-  //     // セッションにカスタムプロパティを追加する場合
-  //     // session.user.id = token.sub; // 例: ユーザーIDをセッションに追加
-  //     return session;
-  //   }
-  // },
-  // secret: process.env.NEXTAUTH_SECRET, // .env.local に定義されていれば自動で読み込まれる
-  // pages: { // カスタムログインページを指定する場合
-  //   signIn: '/auth/signin', // '/auth/signin.tsx' を作成
-  // }
+  callbacks: {
+    async signIn({ user, account, profile }) {
+      if (account?.provider === "google") {
+        // 環境変数から許可されたメールアドレスのリストを取得
+        const allowedEmailsEnv = process.env.ALLOWED_EMAILS;
+        if (!allowedEmailsEnv) {
+          console.error("ALLOWED_EMAILS environment variable is not set.");
+          return false; // 環境変数が設定されていなければ全員拒否（セキュリティのため）
+        }
+        const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+
+        // ユーザーのメールアドレスが許可リストに含まれているか確認
+        if (user.email && allowedEmails.includes(user.email.toLowerCase())) {
+          return true; // 許可リストに含まれていればサインインを許可
+        } else {
+          console.warn(`Unauthorized attempt to sign in by: ${user.email}`);
+          // ここでカスタムエラーページにリダイレクトすることも可能
+          // 例: return '/unauthorized-access';
+          return false; // 許可リストに含まれていなければサインインを拒否
+        }
+      }
+      // 他のプロバイダでのサインインの場合は、プロバイダに応じた処理を記述
+      return true; // Google以外はデフォルトで許可 (必要に応じて変更)
+    },
+    // ... 他のコールバック (sessionなど)
+    // async session({ session, token, user }) {
+    //   return session;
+    // }
+  },
+  // ... (他の設定: secret, pagesなど)
 };
 
 const handler = NextAuth(authOptions);
