@@ -17,36 +17,122 @@ interface IrregularHour {
   notes?: string;
 }
 
-// ダミーデータとAPIシミュレーション
+
+import { contentfulClient } from '@/lib/contentfulClient';
+import { contentfulManagementClient } from '@/lib/contentfulManagementClient';
+
+const spaceId = process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string;
+
 const fetchIrregularHours = async (): Promise<IrregularHour[]> => {
-  console.log("Fetching irregular hours...");
-  // TODO: Contentfulからデータを取得
-  return new Promise(resolve => setTimeout(() => resolve([
-    { id: '1', date: '2025-07-20', openTime: '10:00', closeTime: '15:00', isClosed: false, notes: 'イベント開催のため短縮営業' },
-    { id: '2', date: '2025-08-15', isClosed: true, notes: '夏季休業' },
-    { id: '3', date: '2025-09-01', openTime: '12:00', closeTime: '20:00', isClosed: false, notes: '棚卸しのため午後から営業' },
-  ]), 500));
+  try {
+    const response = await contentfulClient.getEntries({
+      content_type: 'openingHours',
+      order: ['fields.openingTime'],
+    });
+    return response.items.map((item: { fields: Record<string, any>; sys: { id: string } }) => {
+      const fields = item.fields;
+      let dateStr = '';
+      if (fields.openingTime) {
+        if (typeof fields.openingTime === 'string') {
+          dateStr = fields.openingTime.split('T')[0];
+        } else if (fields.openingTime instanceof Date) {
+          dateStr = fields.openingTime.toISOString().split('T')[0];
+        } else if (fields.openingTime.toString) {
+          dateStr = fields.openingTime.toString().split('T')[0];
+        }
+      }
+      return {
+        id: item.sys.id,
+        date: dateStr,
+        openTime: typeof fields.openTime === 'string' ? fields.openTime : '',
+        closeTime: typeof fields.closeTime === 'string' ? fields.closeTime : '',
+        isClosed: typeof fields.isClosed === 'boolean' ? fields.isClosed : false,
+        notes: typeof fields.notes === 'string' ? fields.notes : '',
+      };
+    });
+  } catch (error) {
+    console.error('Contentful fetch error:', error);
+    return [];
+  }
 };
 
 const createIrregularHour = async (data: Omit<IrregularHour, 'id'>): Promise<IrregularHour> => {
-  console.log("Creating irregular hour:", data);
-  // TODO: Contentfulへデータ作成
-  return new Promise(resolve => setTimeout(() => resolve({ id: String(Date.now()), ...data }), 300));
+  try {
+    const space = await contentfulManagementClient.getSpace(spaceId);
+    const environment = await space.getEnvironment('master');
+    const entry = await environment.createEntry('openingHours', {
+      fields: {
+        openingTime: { 'en-US': data.date ? new Date(data.date).toISOString() : null },
+        openTime: { 'en-US': data.openTime},
+        closeTime: { 'en-US': data.closeTime},
+        isClosed: { 'en-US': data.isClosed },
+        notes: { 'en-US': data.notes || '' },
+      },
+    });
+    await entry.publish();
+    return {
+      id: entry.sys.id,
+      date: data.date,
+      openTime: data.openTime,
+      closeTime: data.closeTime,
+      isClosed: data.isClosed,
+      notes: data.notes,
+    };
+  } catch (error) {
+    console.error('Contentful create error:', error);
+    throw error;
+  }
 };
 
 const updateIrregularHour = async (id: string, data: Partial<Omit<IrregularHour, 'id'>>): Promise<IrregularHour | null> => {
-  console.log(`Updating irregular hour ${id}:`, data);
-  // TODO: Contentfulのデータ更新
-  // ダミー実装: 実際には既存データを取得してマージするなど
-  const updatedData = await fetchIrregularHours().then(hours => hours.find(h => h.id === id));
-  if (!updatedData) return null;
-  return new Promise(resolve => setTimeout(() => resolve({ ...updatedData, ...data }), 300));
+  try {
+    const space = await contentfulManagementClient.getSpace(spaceId);
+    const environment = await space.getEnvironment('master');
+    const entry = await environment.getEntry(id);
+    if (!entry) return null;
+    if (data.date !== undefined) {
+      entry.fields.openingTime = { 'en-US': new Date(data.date).toISOString() };
+    }
+    if (data.openTime !== undefined) {
+      entry.fields.openTime = { 'en-US': data.openTime };
+    }
+    if (data.closeTime !== undefined) {
+      entry.fields.closeTime = { 'en-US': data.closeTime };
+    }
+    if (data.isClosed !== undefined) {
+      entry.fields.isClosed = { 'en-US': data.isClosed };
+    }
+    if (data.notes !== undefined) {
+      entry.fields.notes = { 'en-US': data.notes };
+    }
+    const updatedEntry = await entry.update();
+    await updatedEntry.publish();
+    return {
+      id: updatedEntry.sys.id,
+      date: data.date || (entry.fields.openingTime ? new Date(entry.fields.openingTime['en-US']).toISOString().split('T')[0] : ''),
+      openTime: data.openTime || entry.fields.openTime?.['en-US'] || '',
+      closeTime: data.closeTime || entry.fields.closeTime?.['en-US'] || '',
+      isClosed: data.isClosed !== undefined ? data.isClosed : entry.fields.isClosed?.['en-US'] || false,
+      notes: data.notes || entry.fields.notes?.['en-US'] || '',
+    };
+  } catch (error) {
+    console.error('Contentful update error:', error);
+    return null;
+  }
 };
 
 const deleteIrregularHour = async (id: string): Promise<void> => {
-  console.log(`Deleting irregular hour ${id}`);
-  // TODO: Contentfulのデータ削除
-  return new Promise(resolve => setTimeout(resolve, 300));
+  try {
+    const space = await contentfulManagementClient.getSpace(spaceId);
+    const environment = await space.getEnvironment('master');
+    const entry = await environment.getEntry(id);
+    if (!entry) return;
+    await entry.unpublish();
+    await entry.delete();
+  } catch (error) {
+    console.error('Contentful delete error:', error);
+    throw error;
+  }
 };
 
 
