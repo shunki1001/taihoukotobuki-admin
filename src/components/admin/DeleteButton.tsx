@@ -2,14 +2,31 @@
 
 import React from "react";
 import Button from "@/components/ui/Button";
+import { contentfulManagementClient } from "@/lib/contentfulManagementClient";
 
 type DeleteButtonProps = {
-  title: string;
+  entryId: string;
+  onDelete?: () => void;
 };
 
-const DeleteButton: React.FC<DeleteButtonProps> = ({ title }) => {
-  const handleDelete = () => {
-    alert(`削除機能: ${title}`);
+const DeleteButton: React.FC<DeleteButtonProps> = ({ entryId }) => {
+  const handleDelete = async () => {
+    if (!confirm("本当に削除しますか？")) {
+      return;
+    }
+    try {
+      const space = await contentfulManagementClient.getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string);
+      const environment = await space.getEnvironment("master");
+      const entry = await environment.getEntry(entryId);
+      await entry.unpublish();
+      await entry.delete();
+      alert("コンテンツを削除しました。");
+      // 必要に応じてページ遷移や状態更新をここで行う
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to delete entry", error);
+      alert("削除に失敗しました。");
+    }
   };
 
   return (

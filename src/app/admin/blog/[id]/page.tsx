@@ -1,30 +1,31 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import BlogForm, { BlogFormData } from '@/components/admin/BlogForm';
+import BlogForm, { BlogFormData as BlogFormDataUI } from '@/components/admin/BlogForm';
 import { useParams, useRouter } from 'next/navigation'; // next/navigationからインポート
 import Card from '@/components/ui/Card';
 
+import { fetchBlogPostById, updatePostInContentful, BlogFormData as BlogFormDataApi } from '@/lib/contentfulApi';
 
 // ダミーの既存記事データ (実際にはAPIから取得)
-const fetchBlogPostById = async (id: string): Promise<BlogFormData | null> => {
-  console.log(`Fetching blog post with id: ${id}`);
-  // TODO: ContentfulからIDに基づいて記事データを取得する
-  if (id === "1") {
-    return { title: "最初のブログ記事", content: "これは最初のブログ記事の本文です。\n編集しています。", status: "published" };
-  }
-  if (id === "2") {
-    return { title: "Tailwind CSS入門", content: "Tailwind CSS はいいぞ。\n下書きです。", status: "draft" };
-  }
-  return null;
-};
+// const fetchBlogPostById = async (id: string): Promise<BlogFormDataApi | null> => {
+//   console.log(`Fetching blog post with id: ${id}`);
+//   // TODO: ContentfulからIDに基づいて記事データを取得する
+//   if (id === "1") {
+//     return { title: "最初のブログ記事", content: "これは最初のブログ記事の本文です。\n編集しています。", status: "published" };
+//   }
+//   if (id === "2") {
+//     return { title: "Tailwind CSS入門", content: "Tailwind CSS はいいぞ。\n下書きです。", status: "draft" };
+//   }
+//   return null;
+// };
 
 export default function EditBlogPage() {
   const router = useRouter();
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const [initialData, setInitialData] = useState<BlogFormData | undefined>(undefined);
+  const [initialData, setInitialData] = useState<BlogFormDataUI | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +38,17 @@ export default function EditBlogPage() {
         try {
           const data = await fetchBlogPostById(id);
           if (data) {
-            setInitialData(data);
+            // Contentful APIのBlogFormDataApi型からUI用のBlogFormDataUI型に変換
+            const uiData: BlogFormDataUI = {
+              internalName: data.internalName,
+              slug: data.slug,
+              publishedDate: data.publishedDate,
+              title: data.title,
+              featuredImageId: data.featuredImageId,
+              content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content),
+              status: data.status,
+            };
+            setInitialData(uiData);
           } else {
             setError("記事が見つかりませんでした。");
           }
@@ -55,40 +66,33 @@ export default function EditBlogPage() {
     }
   }, [id]);
 
-  const handleSubmit = async (data: BlogFormData) => {
+  const handleSubmit = async (data: BlogFormDataUI) => {
     setIsSubmitting(true);
-    console.log(`Updating blog post ${id}:`, data);
-    // TODO: Contentfulへのデータ更新処理
-    // try {
-    //   await updatePostInContentful(id, data);
-    //   alert('ブログ記事を更新しました。');
-    //   router.push('/admin/blog'); // 一覧へリダイレクト
-    // } catch (error) {
-    //   console.error("Failed to update post", error);
-    //   alert('記事の更新に失敗しました。');
-    // } finally {
-    //   setIsSubmitting(false);
-    // }
-    alert(`更新 (シミュレーション) ID: ${id}\nタイトル: ${data.title}\nステータス: ${data.status}\n本文:\n${data.content}`);
-    setIsSubmitting(false);
-    router.push('/admin/blog'); // 成功したと仮定してリダイレクト
+    try {
+      // UI用のBlogFormDataUI型からContentful API用のBlogFormDataApi型に変換
+      const apiData: BlogFormDataApi = {
+        internalName: data.internalName,
+        slug: data.slug,
+        publishedDate: data.publishedDate,
+        title: data.title,
+        featuredImageId: data.featuredImageId,
+        content: data.content,
+        status: data.status,
+      };
+      await updatePostInContentful(id, apiData);
+      alert('ブログ記事を更新しました。');
+      router.push('/admin/blog'); // 一覧へリダイレクト
+    } catch (error) {
+      console.error("Failed to update post", error);
+      alert('記事の更新に失敗しました。');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
     router.push('/admin/blog');
   };
-
-  if (isLoading) {
-    return <div className="p-6"><Card><p className="text-center text-gray-600 dark:text-gray-300">読み込み中...</p></Card></div>;
-  }
-
-  if (error) {
-    return <div className="p-6"><Card><p className="text-center text-red-600">{error}</p></Card></div>;
-  }
-
-  if (!initialData) {
-     return <div className="p-6"><Card><p className="text-center text-gray-600 dark:text-gray-300">記事データが見つかりません。</p></Card></div>;
-  }
 
   return (
     <div>

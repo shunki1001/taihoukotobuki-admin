@@ -1,19 +1,30 @@
-
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import DeleteButton from '@/components/admin/DeleteButton';
+import { contentfulClient } from '@/lib/contentfulClient';
 
-// ダミーデータ (実際にはContentfulから取得)
-const dummyPosts = [
-  { id: '1', title: '最初のブログ記事', status: '公開済み', date: '2024-05-01' },
-  { id: '2', title: 'Tailwind CSS入門', status: '下書き', date: '2024-05-03' },
-  { id: '3', title: 'Next.jsのApp Routerについて', status: '公開済み', date: '2024-04-20' },
-];
+// Contentfulからブログ記事一覧を取得する関数
+async function fetchPostsFromContentful() {
+  const response = await contentfulClient.getEntries<any>({
+    content_type: 'pageBlogPost',
+    order: '-fields.publishedDate',
+  });
+
+  return response.items.map((item: any) => {
+    const fields = item.fields;
+    return {
+      id: item.sys.id,
+      title: fields.title?.ja || fields.title || 'タイトルなし',
+      status: fields.status === 'draft' ? '下書き' : '公開済み',
+      date: fields.publishedDate ? new Date(fields.publishedDate).toISOString().slice(0, 10) : '',
+      slug: fields.slug || '',
+    };
+  });
+}
 
 export default async function BlogListPage() {
-  // const posts = await fetchPostsFromContentful(); // Contentfulからのデータ取得
-  const posts = dummyPosts; // ダミーデータを使用
+  const posts = await fetchPostsFromContentful();
 
   return (
     <div>
@@ -49,7 +60,7 @@ export default async function BlogListPage() {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {posts.map((post) => (
+            {posts.map((post: { id: string; title: string; status: string; date: string }) => (
               <tr key={post.id}>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900 dark:text-white">{post.title}</div>
@@ -71,7 +82,7 @@ export default async function BlogListPage() {
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
                     <span className="sr-only sm:not-sr-only">編集</span>
                   </Link>
-                  <DeleteButton title={post.title} />
+                  <DeleteButton entryId={post.id} />
                 </td>
               </tr>
             ))}

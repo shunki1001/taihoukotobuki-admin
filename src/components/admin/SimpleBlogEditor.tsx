@@ -55,6 +55,7 @@ const SimpleBlogEditor: React.FC<SimpleBlogEditorProps> = ({ value, onChange }) 
         {/* 必要に応じて太字・イタリックなどのシンプルなMarkdown用ボタンを追加 */}
       </div>
       <textarea
+        id="content"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onSelect={onTextSelect} // 簡易的な選択テキスト取得

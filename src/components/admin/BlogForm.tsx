@@ -7,7 +7,11 @@ import Card from '@/components/ui/Card';
 import SimpleBlogEditor from '@/components/admin/SimpleBlogEditor';
 
 export interface BlogFormData {
+  internalName: string;
+  slug: string;
+  publishedDate: string; // ISO string
   title: string;
+  featuredImageId: string;
   content: string;
   status: 'draft' | 'published';
   // 必要に応じて他のフィールド (例: category, tags) を追加
@@ -31,18 +35,26 @@ const BlogForm: React.FC<BlogFormProps> = ({
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [internalName, setInternalName] = useState('');
+  const [slug, setSlug] = useState('');
+  const [publishedDate, setPublishedDate] = useState('');
+  const [featuredImageId, setFeaturedImageId] = useState('');
 
   useEffect(() => {
     if (initialData) {
       setTitle(initialData.title || '');
       setContent(initialData.content || '');
       setStatus(initialData.status || 'draft');
+      setInternalName(initialData.internalName || '');
+      setSlug(initialData.slug || '');
+      setPublishedDate(initialData.publishedDate || '');
+      setFeaturedImageId(initialData.featuredImageId || '');
     }
   }, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({ title, content, status });
+    await onSubmit({ internalName, slug, publishedDate, title, featuredImageId, content, status });
   };
 
   return (
@@ -62,6 +74,39 @@ const BlogForm: React.FC<BlogFormProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <Input
+              label="Internal Name"
+              id="internalName"
+              value={internalName}
+              onChange={(e) => setInternalName(e.target.value)}
+              required
+              placeholder="内部名 (ユニーク)"
+              disabled={isSubmitting}
+            />
+          </Card>
+          <Card>
+            <Input
+              label="Slug"
+              id="slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              required
+              placeholder="URLスラッグ (ユニーク)"
+              disabled={isSubmitting}
+            />
+          </Card>
+          <Card>
+            <Input
+              label="Published Date"
+              id="publishedDate"
+              type="date"
+              value={publishedDate}
+              onChange={(e) => setPublishedDate(e.target.value)}
+              required
+              disabled={isSubmitting}
+            />
+          </Card>
           <Card>
             <Input
               label="タイトル"
@@ -97,6 +142,17 @@ const BlogForm: React.FC<BlogFormProps> = ({
                 <option value="published">公開</option>
               </select>
             </div>
+            <Card>
+              <Input
+                label="Featured Image Asset ID"
+                id="featuredImageId"
+                value={featuredImageId}
+                onChange={(e) => setFeaturedImageId(e.target.value)}
+                required
+                placeholder="画像のAsset IDを入力"
+                disabled={isSubmitting}
+              />
+            </Card>
             {/* 他に公開日ピッカー、カテゴリ、タグ選択などを追加 */}
           </Card>
         </div>
