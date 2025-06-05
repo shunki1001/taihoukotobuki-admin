@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import BlogForm from '@/components/admin/BlogForm';
 import { useParams, useRouter } from 'next/navigation';
 
-import { fetchBlogPostById, updatePostInContentful, BlogFormData } from '@/lib/contentfulApi';
+import { fetchBlogPostById, updatePostInContentful, BlogFormData } from '@/lib/contentfulContentsApi';
 
 // ダミーの既存記事データ (実際にはAPIから取得)
 // const fetchBlogPostById = async (id: string): Promise<BlogFormDataApi | null> => {

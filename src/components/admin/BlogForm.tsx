@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import SimpleBlogEditor from '@/components/admin/SimpleBlogEditor';
 
-import { BlogFormData } from '@/lib/contentfulApi';
+import { BlogFormData } from '@/lib/contentfulContentsApi';
 
 interface BlogFormProps {
   initialData?: Partial<BlogFormData>; // 編集時に初期値を設定

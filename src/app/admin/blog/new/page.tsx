@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import BlogForm from '@/components/admin/BlogForm';
 import { useRouter } from 'next/navigation'; // next/navigationからインポート
-import { createPostInContentful, BlogFormData } from '@/lib/contentfulApi';
+import { createPostInContentful, BlogFormData } from '@/lib/contentfulContentsApi';
 
 export default function NewBlogPage() {
   const router = useRouter();
