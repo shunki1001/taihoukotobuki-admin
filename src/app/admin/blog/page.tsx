@@ -1,27 +1,10 @@
 import Link from 'next/link';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import DeleteButton from '@/components/admin/DeleteButton';
-import { contentfulClient } from '@/lib/contentfulClient';
+import DeleteButton from '@/components/admin/DeleteButton'
+import {fetchPostsFromContentful} from '@/lib/contentfulContentsApi'
 
-// Contentfulからブログ記事一覧を取得する関数
-async function fetchPostsFromContentful() {
-  const response = await contentfulClient.getEntries<any>({
-    content_type: 'pageBlogPost',
-    order: '-fields.publishedDate',
-  });
 
-  return response.items.map((item: any) => {
-    const fields = item.fields;
-    return {
-      id: item.sys.id,
-      title: fields.title?.ja || fields.title || 'タイトルなし',
-      status: fields.status === 'draft' ? '下書き' : '公開済み',
-      date: fields.publishedDate ? new Date(fields.publishedDate).toISOString().slice(0, 10) : '',
-      slug: fields.slug || '',
-    };
-  });
-}
 
 export default async function BlogListPage() {
   const posts = await fetchPostsFromContentful();
