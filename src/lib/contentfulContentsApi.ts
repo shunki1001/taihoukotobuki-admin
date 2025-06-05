@@ -1,5 +1,6 @@
 import { contentfulClient } from './contentfulClient';
 import { contentfulManagementClient } from './contentfulManagementClient';
+import type { Entry, EntryCollection } from 'contentful';
 
 export interface BlogFormData {
   slug: string;
@@ -95,18 +96,38 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
 
 // Contentfulからブログ記事一覧を取得する関数
 export async function fetchPostsFromContentful() {
-  const response = await contentfulClient.getEntries<any>({
+  const response: EntryCollection<any> = await contentfulClient.getEntries({
     content_type: 'pageBlogPost',
-    order: '-fields.publishedDate',
+    order: ['-fields.publishedDate'],
   });
 
-  return response.items.map((item: any) => {
+  return response.items.map((item: Entry<any>) => {
     const fields = item.fields;
+
+    // Type guard for title with possible 'ja' property
+    let title = 'タイトルなし';
+    if (fields.title) {
+      if (typeof fields.title === 'object' && fields.title !== null && 'ja' in fields.title) {
+        const jaTitle = (fields.title as Record<string, unknown>)['ja'];
+        if (typeof jaTitle === 'string') {
+          title = jaTitle;
+        }
+      } else if (typeof fields.title === 'string') {
+        title = fields.title;
+      }
+    }
+
+    // Type guard for publishedDate to be string or number
+    let date = '';
+    if (fields.publishedDate && (typeof fields.publishedDate === 'string' || typeof fields.publishedDate === 'number')) {
+      date = new Date(fields.publishedDate).toISOString().slice(0, 10);
+    }
+
     return {
       id: item.sys.id,
-      title: fields.title?.ja || fields.title || 'タイトルなし',
+      title,
       status: fields.status === 'draft' ? '下書き' : '公開済み',
-      date: fields.publishedDate ? new Date(fields.publishedDate).toISOString().slice(0, 10) : '',
+      date,
       slug: fields.slug || '',
     };
   });

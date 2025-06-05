@@ -3,7 +3,7 @@
 import NextAuth, { AuthOptions } from "next-auth"; // AuthOptions をインポート
 import GoogleProvider from "next-auth/providers/google";
 
-export const authOptions: AuthOptions = { // 型を明示
+const authOptions: AuthOptions = { // 型を明示
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -11,7 +11,7 @@ export const authOptions: AuthOptions = { // 型を明示
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       if (account?.provider === "google") {
         // 環境変数から許可されたメールアドレスのリストを取得
         const allowedEmailsEnv = process.env.ALLOWED_EMAILS;

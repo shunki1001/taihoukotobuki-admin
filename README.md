@@ -10,7 +10,7 @@ gcloud auth configure-docker
 
 ```bash
 # .envファイルから環境変数を読み込み、ビルド時に渡す例
-docker build $(awk -F= '!/^#/ && NF==2 {print "--build-arg " $1 "_ARG=" $2}' .env.local | tr '\n' ' ') -t gcr.io/smarthome-428311/taihoukotobuki-admin-cloud-run:latest .
+docker build $(awk -F= '!/^#/ && NF==2 {print "--build-arg " $1 "_ARG=" $2}' .env | tr '\n' ' ') -t gcr.io/smarthome-428311/taihoukotobuki-admin-cloud-run:latest .
 docker push gcr.io/smarthome-428311/taihoukotobuki-admin-cloud-run:latest
 ```
 
