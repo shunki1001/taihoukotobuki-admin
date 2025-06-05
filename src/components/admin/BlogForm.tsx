@@ -25,19 +25,27 @@ const BlogForm: React.FC<BlogFormProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [status, setStatus] = useState<'draft' | 'published'>('published');
   const [slug, setSlug] = useState('');
-  const [publishedDate, setPublishedDate] = useState('');
+const getTodayDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
-  useEffect(() => {
-    if (initialData) {
-      setTitle(initialData.title || '');
-      setContent(initialData.content || '');
-      setStatus(initialData.status || 'published');
-      setSlug(initialData.slug || '');
-      setPublishedDate(initialData.publishedDate || '');
-    }
-  }, [initialData]);
+const [publishedDate, setPublishedDate] = useState(getTodayDateString());
+
+useEffect(() => {
+  if (initialData) {
+    setTitle(initialData.title || '');
+    setContent(initialData.content || '');
+    setStatus(initialData.status || 'published');
+    setSlug(initialData.slug || '');
+    setPublishedDate(initialData.publishedDate || getTodayDateString());
+  }
+}, [initialData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
