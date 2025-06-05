@@ -65,23 +65,29 @@ export const updatePostInContentful = async (id: string, data: BlogFormData) => 
   return updatedEntry;
 };
 
+// Type guard to check if sys has publishedAt property
+const hasPublishedAt = (sys: unknown): sys is { publishedAt: string } => {
+  return typeof sys === 'object' && sys !== null && 'publishedAt' in sys && typeof (sys as { publishedAt?: unknown }).publishedAt === 'string';
+};
+
 // Fetch a blog post by ID and map to BlogFormData
 export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null> => {
   try {
     const entry = await contentfulClient.getEntry(id);
 
-    if (!entry) return null;
+    if (!entry || !entry.fields) return null;
 
     const fields = entry.fields;
 
     return {
-      slug: fields.slug ?? '',
-      publishedDate: fields.publishedDate ?? '',
-      title: fields.title ?? '',
-      content: fields.content ?? '',
-      status: entry.sys.publishedAt ? 'published' : 'draft',
+      slug: typeof fields.slug === 'string' ? fields.slug : '',
+      publishedDate: typeof fields.publishedDate === 'string' ? fields.publishedDate : '',
+      title: typeof fields.title === 'string' ? fields.title : '',
+      content: typeof fields.content === 'string' ? fields.content : '',
+      status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
     };
   } catch (error) {
+     
     console.error('Error fetching blog post by ID:', error);
     return null;
   }
