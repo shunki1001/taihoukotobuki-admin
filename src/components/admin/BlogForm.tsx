@@ -71,18 +71,7 @@ useEffect(() => {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <Input
-              label="Slug"
-              id="slug"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value)}
-              required
-              placeholder="URLスラッグ (ユニーク)"
-              disabled={isSubmitting}
-            />
-          </Card>
-          <Card>
-            <Input
-              label="Published Date"
+              label="公開日"
               id="publishedDate"
               type="date"
               value={publishedDate}
@@ -126,6 +115,17 @@ useEffect(() => {
                 <option value="published">公開</option>
               </select>
             </div>
+          </Card>
+          <Card>
+            <Input
+              label="URLスラッグ"
+              id="slug"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              required
+              placeholder="URLスラッグ (ユニーク)"
+              disabled={isSubmitting}
+            />
           </Card>
         </div>
       </div>
