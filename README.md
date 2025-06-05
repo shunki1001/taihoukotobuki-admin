@@ -1,36 +1,32 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## terraform/terraform.tfvars を使ったCloud Runデプロイ手順
 
-## Getting Started
-
-First, run the development server:
+1. gcloudの設定
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+gcloud auth configure-docker
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Dockerイメージをビルドし、GCRにプッシュ
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# .envファイルから環境変数を読み込み、ビルド時に渡す例
+docker build $(awk -F= '!/^#/ && NF==2 {print "--build-arg " $1 "_ARG=" $2}' .env.local | tr '\n' ' ') -t gcr.io/smarthome-428311/taihoukotobuki-admin-cloud-run:latest .
+docker push gcr.io/smarthome-428311/taihoukotobuki-admin-cloud-run:latest
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+3. Terraformの初期化と適用
 
-## Learn More
+```bash
+cd terraform
+terraform init
+terraform apply
+```
 
-To learn more about Next.js, take a look at the following resources:
+4. 適用後、Cloud RunのURLが表示されるのでブラウザでアクセスし、Next.jsアプリが動作していることを確認してください。
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 注意点
+- Cloud Runはポート8080を使用します。DockerfileでEXPOSE 8080、Next.jsの起動もポート8080にしてください。
+- Next.jsの`package.json`の`start`スクリプトは`next start -p 8080`のようにポート指定が必要です。
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
