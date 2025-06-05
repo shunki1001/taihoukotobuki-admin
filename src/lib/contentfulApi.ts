@@ -2,11 +2,9 @@ import { contentfulClient } from './contentfulClient';
 import { contentfulManagementClient } from './contentfulManagementClient';
 
 export interface BlogFormData {
-  internalName: string;
   slug: string;
   publishedDate: string; // ISO string
   title: string;
-  featuredImageId: string; // Asset ID
   content: string; // Markdown text
   status: 'draft' | 'published';
 }
@@ -25,19 +23,9 @@ export const createPostInContentful = async (data: BlogFormData) => {
   // Create entry
   const entry = await environment.createEntry('pageBlogPost', {
     fields: {
-      internalName: { 'en-US': data.internalName },
       slug: { 'en-US': data.slug },
       publishedDate: { 'en-US': data.publishedDate },
       title: { 'en-US': data.title },
-      featuredImage: {
-        'en-US': {
-          sys: {
-            type: 'Link',
-            linkType: 'Asset',
-            id: data.featuredImageId,
-          },
-        },
-      },
       content: { 'en-US': data.content },
     },
   });
@@ -56,19 +44,9 @@ export const updatePostInContentful = async (id: string, data: BlogFormData) => 
 
   const entry = await environment.getEntry(id);
 
-  entry.fields.internalName = { 'en-US': data.internalName };
   entry.fields.slug = { 'en-US': data.slug };
   entry.fields.publishedDate = { 'en-US': data.publishedDate };
   entry.fields.title = { 'en-US': data.title };
-  entry.fields.featuredImage = {
-    'en-US': {
-      sys: {
-        type: 'Link',
-        linkType: 'Asset',
-        id: data.featuredImageId,
-      },
-    },
-  };
   entry.fields.content = { 'en-US': data.content };
 
   const updatedEntry = await entry.update();
@@ -97,11 +75,9 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
     const fields = entry.fields;
 
     return {
-      internalName: fields.internalName ?? '',
       slug: fields.slug ?? '',
       publishedDate: fields.publishedDate ?? '',
       title: fields.title ?? '',
-      featuredImageId: fields.featuredImage?.sys?.id ?? '',
       content: fields.content ?? '',
       status: entry.sys.publishedAt ? 'published' : 'draft',
     };

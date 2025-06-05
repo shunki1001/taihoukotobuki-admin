@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
-import BlogForm, { BlogFormData } from '@/components/admin/BlogForm';
+import BlogForm from '@/components/admin/BlogForm';
 import { useRouter } from 'next/navigation'; // next/navigationからインポート
-import { createPostInContentful } from '@/lib/contentfulApi';
+import { createPostInContentful, BlogFormData } from '@/lib/contentfulApi';
 
 export default function NewBlogPage() {
   const router = useRouter();

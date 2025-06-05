@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import BlogForm, { BlogFormData as BlogFormDataUI } from '@/components/admin/BlogForm';
-import { useParams, useRouter } from 'next/navigation'; // next/navigationからインポート
-import Card from '@/components/ui/Card';
+import BlogForm from '@/components/admin/BlogForm';
+import { useParams, useRouter } from 'next/navigation';
 
-import { fetchBlogPostById, updatePostInContentful, BlogFormData as BlogFormDataApi } from '@/lib/contentfulApi';
+import { fetchBlogPostById, updatePostInContentful, BlogFormData } from '@/lib/contentfulApi';
 
 // ダミーの既存記事データ (実際にはAPIから取得)
 // const fetchBlogPostById = async (id: string): Promise<BlogFormDataApi | null> => {
@@ -25,7 +24,7 @@ export default function EditBlogPage() {
   const params = useParams();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const [initialData, setInitialData] = useState<BlogFormDataUI | undefined>(undefined);
+  const [initialData, setInitialData] = useState<BlogFormData | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +37,11 @@ export default function EditBlogPage() {
         try {
           const data = await fetchBlogPostById(id);
           if (data) {
-            // Contentful APIのBlogFormDataApi型からUI用のBlogFormDataUI型に変換
-            const uiData: BlogFormDataUI = {
-              internalName: data.internalName,
+            // Contentful APIのBlogFormDataApi型からUI用のBlogFormData型に変換
+            const uiData: BlogFormData = {
               slug: data.slug,
               publishedDate: data.publishedDate,
               title: data.title,
-              featuredImageId: data.featuredImageId,
               content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content),
               status: data.status,
             };
@@ -66,16 +63,14 @@ export default function EditBlogPage() {
     }
   }, [id]);
 
-  const handleSubmit = async (data: BlogFormDataUI) => {
+  const handleSubmit = async (data: BlogFormData) => {
     setIsSubmitting(true);
     try {
-      // UI用のBlogFormDataUI型からContentful API用のBlogFormDataApi型に変換
-      const apiData: BlogFormDataApi = {
-        internalName: data.internalName,
+      // UI用のBlogFormData型からContentful API用のBlogFormDataApi型に変換
+      const apiData: BlogFormData = {
         slug: data.slug,
         publishedDate: data.publishedDate,
         title: data.title,
-        featuredImageId: data.featuredImageId,
         content: data.content,
         status: data.status,
       };
