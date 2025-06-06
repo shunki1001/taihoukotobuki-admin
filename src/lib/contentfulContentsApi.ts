@@ -178,22 +178,52 @@ const hasPublishedAt = (sys: unknown): sys is { publishedAt: string } => {
 
 export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null> => {
   try {
-    const entry = await contentfulClient.getEntry(id);
+    const space = await contentfulManagementClient.getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string);
+    const environment = await space.getEnvironment('master');
+
+    const entry = await environment.getEntry(id);
 
     if (!entry || !entry.fields) return null;
 
     const fields = entry.fields;
 
+    // Management APIのfieldsはロケールキー（例: 'en-US'）を持つオブジェクトなので、'en-US'キーから値を取得する
+    const getFieldValue = (field: unknown): string | unknown => {
+      if (field == null) return '';
+      if (typeof field === 'object' && field !== null && 'en-US' in field) {
+        return (field as Record<string, unknown>)['en-US'];
+      }
+      return field;
+    };
+
+    const slug = getFieldValue(fields.slug);
+    const publishedDate = getFieldValue(fields.publishedDate);
+    const title = getFieldValue(fields.title);
+    const content = getFieldValue(fields.content);
+    const rawImageAssetId = getFieldValue(fields.imageAssetId);
+
+    let imageAssetId: string | undefined = undefined;
+    if (
+      rawImageAssetId &&
+      typeof rawImageAssetId === 'object' &&
+      'sys' in rawImageAssetId &&
+      typeof rawImageAssetId.sys === 'object' &&
+      rawImageAssetId.sys !== null &&
+      'id' in rawImageAssetId.sys &&
+      typeof rawImageAssetId.sys.id === 'string'
+    ) {
+      imageAssetId = rawImageAssetId.sys.id;
+    }
+
     return {
-      slug: typeof fields.slug === 'string' ? fields.slug : '',
-      publishedDate: typeof fields.publishedDate === 'string' ? fields.publishedDate : '',
-      title: typeof fields.title === 'string' ? fields.title : '',
-      content: typeof fields.content === 'string' ? fields.content : '',
+      slug: typeof slug === 'string' ? slug : '',
+      publishedDate: typeof publishedDate === 'string' ? publishedDate : '',
+      title: typeof title === 'string' ? title : '',
+      content: typeof content === 'string' ? content : '',
       status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
-      imageAssetId: fields.imageAssetId?.sys?.id || undefined
+      imageAssetId,
     };
   } catch (error) {
-     
     console.error('Error fetching blog post by ID:', error);
     return null;
   }
