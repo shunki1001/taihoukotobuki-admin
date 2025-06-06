@@ -39,6 +39,15 @@ const BlogForm: React.FC<BlogFormProps> = ({
     return `${year}-${month}-${day}`;
   };
 
+  const generateRandomSlug = (length = 8): string => {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    for (let i = 0; i < length; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
   const [publishedDate, setPublishedDate] = useState(getTodayDateString());
 
   useEffect(() => {
@@ -51,11 +60,13 @@ const BlogForm: React.FC<BlogFormProps> = ({
       setPublishedDate(initialData.publishedDate || getTodayDateString());
       setImageAssetId(initialData.imageAssetId);
       setImageUrl(initialData.imageUrl)
+    } else {
+      setSlug(generateRandomSlug());
     }
   }, [initialData]);
 
   useEffect(() => {
-    async function loadImageUrl(imageAssetId:string) {
+    async function loadImageUrl(imageAssetId: string | undefined) {
       if(imageAssetId !== undefined){
         setImageUrl(await getAssetUrl(imageAssetId))
       }
@@ -182,7 +193,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
           </Card>
           <Card>
             <Input
-              label="URLスラッグ"
+              label="URLスラッグ（ランダム）"
               id="slug"
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
