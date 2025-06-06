@@ -1,6 +1,6 @@
 import { contentfulClient } from './contentfulClient';
 import { contentfulManagementClient } from './contentfulManagementClient';
-import type { Entry, EntryCollection, Asset } from 'contentful';
+import type { Asset } from 'contentful';
 
 export interface BlogFormData {
   slug: string;
@@ -79,11 +79,27 @@ export const uploadImageToContentful = async (file: File): Promise<string> => {
 };
 
 // Create a new blog post entry in Contentful
+interface PostEntryFields {
+  slug: { 'en-US': string };
+  publishedDate: { 'en-US': string };
+  title: { 'en-US': string };
+  content: { 'en-US': string };
+  imageAssetId?: {
+    'en-US': {
+      sys: {
+        type: string;
+        linkType: string;
+        id: string;
+      };
+    };
+  };
+}
+
 export const createPostInContentful = async (data: BlogFormData) => {
   const environment = await getEnvironment();
 
   // Create entry
-  const entryFields: any = {
+  const entryFields: PostEntryFields = {
     slug: { 'en-US': data.slug },
     publishedDate: { 'en-US': data.publishedDate },
     title: { 'en-US': data.title },
@@ -184,40 +200,78 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
 };
 
 export async function fetchPostsFromContentful() {
-  const response: EntryCollection<any> = await contentfulClient.getEntries({
+  const environment = await getEnvironment();
+
+  // Management APIでエントリを取得（下書きも含む）
+  const response = await environment.getEntries({
     content_type: 'pageBlogPost',
-    order: ['-fields.publishedDate'],
+    order: '-fields.publishedDate',
   });
 
-  return response.items.map((item: Entry<any>) => {
+  return response.items.map((item) => {
     const fields = item.fields;
 
-    // Type guard for title with possible 'ja' property
+    // Management APIのfieldsはロケールキー（例: 'en-US'）を持つオブジェクトなので、'en-US'キーから値を取得する
+    const getFieldValue = (field: unknown): string | unknown => {
+      if (field == null) return '';
+      if (typeof field === 'object' && field !== null && 'en-US' in field) {
+        return (field as Record<string, unknown>)['en-US'];
+      }
+      return field;
+    };
+
+    // タイトルの取得
     let title = 'タイトルなし';
-    if (fields.title) {
-      if (typeof fields.title === 'object' && fields.title !== null && 'ja' in fields.title) {
-        const jaTitle = (fields.title as Record<string, unknown>)['ja'];
-        if (typeof jaTitle === 'string') {
-          title = jaTitle;
-        }
-      } else if (typeof fields.title === 'string') {
-        title = fields.title;
+    const rawTitle = getFieldValue(fields.title);
+    if (typeof rawTitle === 'string') {
+      title = rawTitle;
+    } else if (typeof rawTitle === 'object' && rawTitle !== null && 'ja' in rawTitle) {
+      const jaTitle = rawTitle['ja'];
+      if (typeof jaTitle === 'string') {
+        title = jaTitle;
+      }
+    } else if (Array.isArray(rawTitle) && rawTitle.length > 0 && typeof rawTitle[0] === 'string') {
+      title = rawTitle[0];
+    }
+
+    // publishedDateの取得
+    let date = '';
+    const rawDate = getFieldValue(fields.publishedDate);
+    if (typeof rawDate === 'string' || typeof rawDate === 'number') {
+      const parsedDate = new Date(rawDate);
+      if (!isNaN(parsedDate.getTime())) {
+        date = parsedDate.toISOString().slice(0, 10);
       }
     }
 
-    // Type guard for publishedDate to be string or number
-    let date = '';
-    if (fields.publishedDate && (typeof fields.publishedDate === 'string' || typeof fields.publishedDate === 'number')) {
-      date = new Date(fields.publishedDate).toISOString().slice(0, 10);
+    // 公開状態の判定
+    const status = item.isPublished() ? '公開済み' : '下書き';
+
+    // imageAssetIdの取得
+    let imageAssetId: string | undefined = undefined;
+    const rawImageAssetId = getFieldValue(fields.imageAssetId);
+    if (
+      rawImageAssetId &&
+      typeof rawImageAssetId === 'object' &&
+      'sys' in rawImageAssetId &&
+      typeof rawImageAssetId.sys === 'object' &&
+      rawImageAssetId.sys !== null &&
+      'id' in rawImageAssetId.sys &&
+      typeof rawImageAssetId.sys.id === 'string'
+    ) {
+      imageAssetId = rawImageAssetId.sys.id;
     }
+
+    // slugの取得
+    const slug = getFieldValue(fields.slug) || '';
 
     return {
       id: item.sys.id,
       title,
-      status: fields.status === 'draft' ? '下書き' : '公開済み',
+      status,
       date,
-      slug: fields.slug || '',
-      imageAssetId: fields.imageAssetId?.sys?.id || undefined,
+      slug,
+      imageAssetId,
     };
   });
 };
