@@ -19,6 +19,15 @@ const getEnvironment = async () => {
   return environment;
 };
 
+// Management APIのfieldsはロケールキー（例: 'en-US'）を持つオブジェクトなので、'en-US'キーから値を取得する
+const getFieldValue = (field: unknown): string | unknown => {
+  if (field == null) return '';
+  if (typeof field === 'object' && field !== null && 'en-US' in field) {
+    return (field as Record<string, unknown>)['en-US'];
+  }
+  return field;
+};
+
 export const uploadImageToContentful = async (file: File): Promise<string> => {
   const environment = await getEnvironment();
 
@@ -65,11 +74,15 @@ export const uploadImageToContentful = async (file: File): Promise<string> => {
   // Process asset for all locales
   await asset.processForAllLocales();
 
+
   // Wait for processing to complete
   let processedAsset = await environment.getAsset(asset.sys.id);
-  while (processedAsset.fields.file['en-US'].url === undefined) {
+  let retryCount = 0;
+  const maxRetries = 5;
+  while (processedAsset.fields.file['en-US'].url === undefined && retryCount < maxRetries) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     processedAsset = await environment.getAsset(asset.sys.id);
+    retryCount++;
   }
 
   // Publish asset
@@ -187,14 +200,6 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
 
     const fields = entry.fields;
 
-    // Management APIのfieldsはロケールキー（例: 'en-US'）を持つオブジェクトなので、'en-US'キーから値を取得する
-    const getFieldValue = (field: unknown): string | unknown => {
-      if (field == null) return '';
-      if (typeof field === 'object' && field !== null && 'en-US' in field) {
-        return (field as Record<string, unknown>)['en-US'];
-      }
-      return field;
-    };
 
     const slug = getFieldValue(fields.slug);
     const publishedDate = getFieldValue(fields.publishedDate);
@@ -240,15 +245,6 @@ export async function fetchPostsFromContentful() {
 
   return response.items.map((item) => {
     const fields = item.fields;
-
-    // Management APIのfieldsはロケールキー（例: 'en-US'）を持つオブジェクトなので、'en-US'キーから値を取得する
-    const getFieldValue = (field: unknown): string | unknown => {
-      if (field == null) return '';
-      if (typeof field === 'object' && field !== null && 'en-US' in field) {
-        return (field as Record<string, unknown>)['en-US'];
-      }
-      return field;
-    };
 
     // タイトルの取得
     let title = 'タイトルなし';
