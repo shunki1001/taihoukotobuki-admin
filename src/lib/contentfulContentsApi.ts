@@ -9,6 +9,12 @@ export interface BlogFormData {
   content: string; // Markdown text
   status: 'draft' | 'published';
   imageAssetId?: string; // Contentful asset ID for the blog image
+  imageUrl?: string;
+}
+
+export interface ResponseUploadImage {
+  assetId: string,
+  imageUrl: string
 }
 
 // Helper to get environment
@@ -18,7 +24,7 @@ const getEnvironment = async () => {
   return environment;
 };
 
-export const uploadImageToContentful = async (file: File): Promise<string> => {
+export const uploadImageToContentful = async (file: File): Promise<ResponseUploadImage> => {
   const environment = await getEnvironment();
 
   // Upload the file to Contentful upload API via direct HTTP POST
@@ -69,12 +75,17 @@ export const uploadImageToContentful = async (file: File): Promise<string> => {
   while (processedAsset.fields.file['en-US'].url === undefined) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     processedAsset = await environment.getAsset(asset.sys.id);
+    console.log(processedAsset)
+    console.log('ここ')
   }
 
   // Publish asset
   await processedAsset.publish();
-
-  return processedAsset.sys.id;
+  console.log(processedAsset)
+  return {
+    assetId: processedAsset.sys.id,
+    imageUrl: `https:${processedAsset.fields.file['en-US'].url}`
+  }
 };
 
 // Create a new blog post entry in Contentful
@@ -90,7 +101,7 @@ export const createPostInContentful = async (data: BlogFormData) => {
   };
 
   if (data.imageAssetId) {
-    entryFields.image = {
+    entryFields.imageAssetId = {
       'en-US': {
         sys: {
           type: 'Link',
@@ -99,6 +110,7 @@ export const createPostInContentful = async (data: BlogFormData) => {
         },
       },
     };
+    entryFields.imageUrl = { 'en-US': data.imageUrl }
   }
 
   const entry = await environment.createEntry('pageBlogPost', {
@@ -133,6 +145,7 @@ export const updatePostInContentful = async (id: string, data: BlogFormData) => 
         },
       },
     };
+    entry.fields.imageUrl = { 'en-US': data.imageUrl };
   } else {
     // Remove image field if no imageAssetId
     delete entry.fields.imageAssetId;
@@ -174,6 +187,7 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
       content: typeof fields.content === 'string' ? fields.content : '',
       status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
       imageAssetId: fields.imageAssetId?.sys?.id || undefined,
+      imageUrl: typeof fields.imageUrl === 'string' ? fields.imageUrl : '',
     };
   } catch (error) {
      
@@ -217,6 +231,7 @@ export async function fetchPostsFromContentful() {
       date,
       slug: fields.slug || '',
       imageAssetId: fields.imageAssetId?.sys?.id || undefined,
+      imageUrl: fields.imageUrl || undefined
     };
   });
 };

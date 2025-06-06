@@ -28,7 +28,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
   const [status, setStatus] = useState<'draft' | 'published'>('published');
   const [slug, setSlug] = useState('');
   const [imageAssetId, setImageAssetId] = useState<string | undefined>(undefined);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(undefined);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
 
   const getTodayDateString = () => {
@@ -50,20 +50,17 @@ const BlogForm: React.FC<BlogFormProps> = ({
       setSlug(initialData.slug || '');
       setPublishedDate(initialData.publishedDate || getTodayDateString());
       setImageAssetId(initialData.imageAssetId);
-      if (initialData.imageAssetId) {
-        // Construct preview URL from Contentful asset ID
-        setImagePreviewUrl(`https://images.ctfassets.net/${process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID}/master/${initialData.imageAssetId}/`);
-      }
+      setImageUrl(initialData.imageUrl)
     }
   }, [initialData]);
 
   useEffect(() => {
-    console.log('imagePreviewUrl changed:', imagePreviewUrl);
-  }, [imagePreviewUrl]);
+    console.log('imageUrl changed:', imageUrl);
+  }, [imageUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({ slug, publishedDate, title, content, status, imageAssetId });
+    await onSubmit({ slug, publishedDate, title, content, status, imageAssetId, imageUrl });
   };
 
   const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
@@ -76,9 +73,9 @@ const BlogForm: React.FC<BlogFormProps> = ({
 
     setUploading(true);
     try {
-      const assetId = await uploadImageToContentful(file);
+      const {assetId, imageUrl} = await uploadImageToContentful(file);
       setImageAssetId(assetId);
-      setImagePreviewUrl(URL.createObjectURL(file));
+      setImageUrl(imageUrl);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
       alert('画像のアップロードに失敗しました。');
@@ -100,9 +97,9 @@ const BlogForm: React.FC<BlogFormProps> = ({
 
     setUploading(true);
     try {
-      const assetId = await uploadImageToContentful(file);
+      const {assetId, imageUrl} = await uploadImageToContentful(file);
       setImageAssetId(assetId);
-      setImagePreviewUrl(URL.createObjectURL(file));
+      setImageUrl(imageUrl);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
       alert('画像のアップロードに失敗しました。');
@@ -113,7 +110,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
 
   const handleRemoveImage = () => {
     setImageAssetId(undefined);
-    setImagePreviewUrl(undefined);
+    setImageUrl(undefined);
   };
 
   return (
@@ -197,9 +194,9 @@ const BlogForm: React.FC<BlogFormProps> = ({
               onDragOver={handleDragOver}
               className="border-2 border-dashed border-gray-400 rounded-md p-4 text-center cursor-pointer"
             >
-              {imagePreviewUrl ? (
+              {imageUrl ? (
                 <div className="relative">
-                  <img src={imagePreviewUrl} alt="ブログ画像プレビュー" className="mx-auto max-h-48 object-contain" />
+                  <img src={imageUrl} alt="ブログ画像プレビュー" className="mx-auto max-h-48 object-contain" />
                   <button
                     type="button"
                     onClick={handleRemoveImage}
