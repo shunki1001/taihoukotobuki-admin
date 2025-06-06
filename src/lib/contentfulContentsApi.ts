@@ -8,6 +8,7 @@ export interface BlogFormData {
   title: string;
   content: string; // Markdown text
   status: 'draft' | 'published';
+  imageAssetId?: string; // Contentful asset ID for the blog image
 }
 
 // Helper to get environment
@@ -17,18 +18,91 @@ const getEnvironment = async () => {
   return environment;
 };
 
+export const uploadImageToContentful = async (file: File): Promise<string> => {
+  const environment = await getEnvironment();
+
+  // Upload the file to Contentful upload API via direct HTTP POST
+  const uploadUrl = `https://upload.contentful.com/spaces/${process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID}/uploads`;
+
+  const response = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.NEXT_PUBLIC_CONTENTFUL_MANAGEMENT_ACCESS_TOKEN}`,
+      'Content-Type': 'application/octet-stream',
+    },
+    body: file,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Contentful upload failed: ${response.statusText}`);
+  }
+
+  const uploadData = await response.json();
+
+  // Create asset referencing the upload URL
+  const asset = await environment.createAsset({
+    fields: {
+      title: {
+        'en-US': file.name,
+      },
+      file: {
+        'en-US': {
+          contentType: file.type,
+          fileName: file.name,
+          uploadFrom: {
+            sys: {
+              type: 'Link',
+              linkType: 'Upload',
+              id: uploadData.sys.id,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  // Process asset for all locales
+  await asset.processForAllLocales();
+
+  // Wait for processing to complete
+  let processedAsset = await environment.getAsset(asset.sys.id);
+  while (processedAsset.fields.file['en-US'].url === undefined) {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    processedAsset = await environment.getAsset(asset.sys.id);
+  }
+
+  // Publish asset
+  await processedAsset.publish();
+
+  return processedAsset.sys.id;
+};
+
 // Create a new blog post entry in Contentful
 export const createPostInContentful = async (data: BlogFormData) => {
   const environment = await getEnvironment();
 
   // Create entry
+  const entryFields: any = {
+    slug: { 'en-US': data.slug },
+    publishedDate: { 'en-US': data.publishedDate },
+    title: { 'en-US': data.title },
+    content: { 'en-US': data.content },
+  };
+
+  if (data.imageAssetId) {
+    entryFields.image = {
+      'en-US': {
+        sys: {
+          type: 'Link',
+          linkType: 'Asset',
+          id: data.imageAssetId,
+        },
+      },
+    };
+  }
+
   const entry = await environment.createEntry('pageBlogPost', {
-    fields: {
-      slug: { 'en-US': data.slug },
-      publishedDate: { 'en-US': data.publishedDate },
-      title: { 'en-US': data.title },
-      content: { 'en-US': data.content },
-    },
+    fields: entryFields,
   });
 
   // Publish entry if status is published
@@ -39,7 +113,6 @@ export const createPostInContentful = async (data: BlogFormData) => {
   return entry;
 };
 
-// Update an existing blog post entry by ID
 export const updatePostInContentful = async (id: string, data: BlogFormData) => {
   const environment = await getEnvironment();
 
@@ -49,6 +122,21 @@ export const updatePostInContentful = async (id: string, data: BlogFormData) => 
   entry.fields.publishedDate = { 'en-US': data.publishedDate };
   entry.fields.title = { 'en-US': data.title };
   entry.fields.content = { 'en-US': data.content };
+
+  if (data.imageAssetId) {
+    entry.fields.imageAssetId = {
+      'en-US': {
+        sys: {
+          type: 'Link',
+          linkType: 'Asset',
+          id: data.imageAssetId,
+        },
+      },
+    };
+  } else {
+    // Remove image field if no imageAssetId
+    delete entry.fields.imageAssetId;
+  }
 
   const updatedEntry = await entry.update();
 
@@ -71,7 +159,6 @@ const hasPublishedAt = (sys: unknown): sys is { publishedAt: string } => {
   return typeof sys === 'object' && sys !== null && 'publishedAt' in sys && typeof (sys as { publishedAt?: unknown }).publishedAt === 'string';
 };
 
-// Fetch a blog post by ID and map to BlogFormData
 export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null> => {
   try {
     const entry = await contentfulClient.getEntry(id);
@@ -86,6 +173,7 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
       title: typeof fields.title === 'string' ? fields.title : '',
       content: typeof fields.content === 'string' ? fields.content : '',
       status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
+      imageAssetId: fields.imageAssetId?.sys?.id || undefined,
     };
   } catch (error) {
      
@@ -94,7 +182,6 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
   }
 };
 
-// Contentfulからブログ記事一覧を取得する関数
 export async function fetchPostsFromContentful() {
   const response: EntryCollection<any> = await contentfulClient.getEntries({
     content_type: 'pageBlogPost',
@@ -129,6 +216,7 @@ export async function fetchPostsFromContentful() {
       status: fields.status === 'draft' ? '下書き' : '公開済み',
       date,
       slug: fields.slug || '',
+      imageAssetId: fields.imageAssetId?.sys?.id || undefined,
     };
   });
-}
+};

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import SimpleBlogEditor from '@/components/admin/SimpleBlogEditor';
 
-import { BlogFormData } from '@/lib/contentfulContentsApi';
+import { BlogFormData, uploadImageToContentful } from '@/lib/contentfulContentsApi';
 
 interface BlogFormProps {
   initialData?: Partial<BlogFormData>; // 編集時に初期値を設定
@@ -27,29 +27,93 @@ const BlogForm: React.FC<BlogFormProps> = ({
   const [content, setContent] = useState('');
   const [status, setStatus] = useState<'draft' | 'published'>('published');
   const [slug, setSlug] = useState('');
-const getTodayDateString = () => {
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
+  const [imageAssetId, setImageAssetId] = useState<string | undefined>(undefined);
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
 
-const [publishedDate, setPublishedDate] = useState(getTodayDateString());
+  const getTodayDateString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-useEffect(() => {
-  if (initialData) {
-    setTitle(initialData.title || '');
-    setContent(initialData.content || '');
-    setStatus(initialData.status || 'published');
-    setSlug(initialData.slug || '');
-    setPublishedDate(initialData.publishedDate || getTodayDateString());
-  }
-}, [initialData]);
+  const [publishedDate, setPublishedDate] = useState(getTodayDateString());
+
+  useEffect(() => {
+    if (initialData) {
+      console.log('initialData:', initialData);
+      setTitle(initialData.title || '');
+      setContent(initialData.content || '');
+      setStatus(initialData.status || 'published');
+      setSlug(initialData.slug || '');
+      setPublishedDate(initialData.publishedDate || getTodayDateString());
+      setImageAssetId(initialData.imageAssetId);
+      if (initialData.imageAssetId) {
+        // Construct preview URL from Contentful asset ID
+        setImagePreviewUrl(`https://images.ctfassets.net/${process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID}/master/${initialData.imageAssetId}/`);
+      }
+    }
+  }, [initialData]);
+
+  useEffect(() => {
+    console.log('imagePreviewUrl changed:', imagePreviewUrl);
+  }, [imagePreviewUrl]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await onSubmit({ slug, publishedDate, title, content, status });
+    await onSubmit({ slug, publishedDate, title, content, status, imageAssetId });
+  };
+
+  const handleDrop = useCallback(async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (uploading || isSubmitting) return;
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) return;
+
+    setUploading(true);
+    try {
+      const assetId = await uploadImageToContentful(file);
+      setImageAssetId(assetId);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } catch (error) {
+      console.error('画像アップロードエラー:', error);
+      alert('画像のアップロードに失敗しました。');
+    } finally {
+      setUploading(false);
+    }
+  }, [uploading, isSubmitting]);
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (uploading || isSubmitting) return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) return;
+
+    setUploading(true);
+    try {
+      const assetId = await uploadImageToContentful(file);
+      setImageAssetId(assetId);
+      setImagePreviewUrl(URL.createObjectURL(file));
+    } catch (error) {
+      console.error('画像アップロードエラー:', error);
+      alert('画像のアップロードに失敗しました。');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImageAssetId(undefined);
+    setImagePreviewUrl(undefined);
   };
 
   return (
@@ -57,11 +121,11 @@ useEffect(() => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
         {/* ページタイトルは呼び出し元で設定 */}
         <div className="flex space-x-2">
-          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="secondary" onClick={onCancel} disabled={isSubmitting || uploading}>
             キャンセル
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? '保存中...' : submitButtonText}
+          <Button type="submit" disabled={isSubmitting || uploading}>
+            {isSubmitting || uploading ? '保存中...' : submitButtonText}
           </Button>
         </div>
       </div>
@@ -77,7 +141,7 @@ useEffect(() => {
               value={publishedDate}
               onChange={(e) => setPublishedDate(e.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
             />
           </Card>
           <Card>
@@ -88,7 +152,7 @@ useEffect(() => {
               onChange={(e) => setTitle(e.target.value)}
               required
               placeholder="記事のタイトル"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
             />
           </Card>
           <Card title="本文">
@@ -108,7 +172,7 @@ useEffect(() => {
                 id="status"
                 value={status}
                 onChange={(e) => setStatus(e.target.value as 'draft' | 'published')}
-                disabled={isSubmitting}
+                disabled={isSubmitting || uploading}
                 className="block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md dark:bg-gray-800 dark:border-gray-600 dark:text-white"
               >
                 <option value="draft">下書き</option>
@@ -124,8 +188,44 @@ useEffect(() => {
               onChange={(e) => setSlug(e.target.value)}
               required
               placeholder="URLスラッグ (ユニーク)"
-              disabled={isSubmitting}
+              disabled={isSubmitting || uploading}
             />
+          </Card>
+          <Card title="ブログ画像">
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-gray-400 rounded-md p-4 text-center cursor-pointer"
+            >
+              {imagePreviewUrl ? (
+                <div className="relative">
+                  <img src={imagePreviewUrl} alt="ブログ画像プレビュー" className="mx-auto max-h-48 object-contain" />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    disabled={isSubmitting || uploading}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full px-2 py-1 text-xs"
+                  >
+                    削除
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p>ここに画像をドラッグ＆ドロップ、またはクリックして選択</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileInputChange}
+                    disabled={isSubmitting || uploading}
+                    className="hidden"
+                    id="imageAssetId"
+                  />
+                  <label htmlFor="imageAssetId" className="cursor-pointer text-blue-600 underline">
+                    画像を選択
+                  </label>
+                </>
+              )}
+            </div>
           </Card>
         </div>
       </div>

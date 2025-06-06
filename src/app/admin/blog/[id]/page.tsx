@@ -44,6 +44,7 @@ export default function EditBlogPage() {
               title: data.title,
               content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content),
               status: data.status,
+              imageAssetId: (data as any).imageAssetId, // 画像アセットIDを追加
             };
             setInitialData(uiData);
           } else {
@@ -73,6 +74,7 @@ export default function EditBlogPage() {
         title: data.title,
         content: data.content,
         status: data.status,
+        imageAssetId: data.imageAssetId, // 画像アセットIDを含める
       };
       await updatePostInContentful(id, apiData);
       alert('ブログ記事を更新しました。');
