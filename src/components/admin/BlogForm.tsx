@@ -6,7 +6,7 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import SimpleBlogEditor from '@/components/admin/SimpleBlogEditor';
 
-import { BlogFormData, uploadImageToContentful } from '@/lib/contentfulContentsApi';
+import { BlogFormData, uploadImageToContentful, getAssetUrl } from '@/lib/contentfulContentsApi';
 
 interface BlogFormProps {
   initialData?: Partial<BlogFormData>; // 編集時に初期値を設定
@@ -55,8 +55,13 @@ const BlogForm: React.FC<BlogFormProps> = ({
   }, [initialData]);
 
   useEffect(() => {
-    console.log('imageUrl changed:', imageUrl);
-  }, [imageUrl]);
+    async function loadImageUrl(imageAssetId:string) {
+      if(imageAssetId !== undefined){
+        setImageUrl(await getAssetUrl(imageAssetId))
+      }
+    }
+    loadImageUrl(imageAssetId)
+  }, [imageAssetId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,9 +78,8 @@ const BlogForm: React.FC<BlogFormProps> = ({
 
     setUploading(true);
     try {
-      const {assetId, imageUrl} = await uploadImageToContentful(file);
+      const assetId = await uploadImageToContentful(file);
       setImageAssetId(assetId);
-      setImageUrl(imageUrl);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
       alert('画像のアップロードに失敗しました。');
@@ -97,9 +101,8 @@ const BlogForm: React.FC<BlogFormProps> = ({
 
     setUploading(true);
     try {
-      const {assetId, imageUrl} = await uploadImageToContentful(file);
+      const assetId = await uploadImageToContentful(file);
       setImageAssetId(assetId);
-      setImageUrl(imageUrl);
     } catch (error) {
       console.error('画像アップロードエラー:', error);
       alert('画像のアップロードに失敗しました。');

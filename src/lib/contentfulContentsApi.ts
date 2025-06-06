@@ -1,6 +1,6 @@
 import { contentfulClient } from './contentfulClient';
 import { contentfulManagementClient } from './contentfulManagementClient';
-import type { Entry, EntryCollection } from 'contentful';
+import type { Entry, EntryCollection, Asset } from 'contentful';
 
 export interface BlogFormData {
   slug: string;
@@ -12,11 +12,6 @@ export interface BlogFormData {
   imageUrl?: string;
 }
 
-export interface ResponseUploadImage {
-  assetId: string,
-  imageUrl: string
-}
-
 // Helper to get environment
 const getEnvironment = async () => {
   const space = await contentfulManagementClient.getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string);
@@ -24,7 +19,7 @@ const getEnvironment = async () => {
   return environment;
 };
 
-export const uploadImageToContentful = async (file: File): Promise<ResponseUploadImage> => {
+export const uploadImageToContentful = async (file: File): Promise<string> => {
   const environment = await getEnvironment();
 
   // Upload the file to Contentful upload API via direct HTTP POST
@@ -75,17 +70,12 @@ export const uploadImageToContentful = async (file: File): Promise<ResponseUploa
   while (processedAsset.fields.file['en-US'].url === undefined) {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     processedAsset = await environment.getAsset(asset.sys.id);
-    console.log(processedAsset)
-    console.log('ここ')
   }
 
   // Publish asset
   await processedAsset.publish();
-  console.log(processedAsset)
-  return {
-    assetId: processedAsset.sys.id,
-    imageUrl: `https:${processedAsset.fields.file['en-US'].url}`
-  }
+
+  return processedAsset.sys.id
 };
 
 // Create a new blog post entry in Contentful
@@ -110,7 +100,6 @@ export const createPostInContentful = async (data: BlogFormData) => {
         },
       },
     };
-    entryFields.imageUrl = { 'en-US': data.imageUrl }
   }
 
   const entry = await environment.createEntry('pageBlogPost', {
@@ -145,7 +134,6 @@ export const updatePostInContentful = async (id: string, data: BlogFormData) => 
         },
       },
     };
-    entry.fields.imageUrl = { 'en-US': data.imageUrl };
   } else {
     // Remove image field if no imageAssetId
     delete entry.fields.imageAssetId;
@@ -186,8 +174,7 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
       title: typeof fields.title === 'string' ? fields.title : '',
       content: typeof fields.content === 'string' ? fields.content : '',
       status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
-      imageAssetId: fields.imageAssetId?.sys?.id || undefined,
-      imageUrl: typeof fields.imageUrl === 'string' ? fields.imageUrl : '',
+      imageAssetId: fields.imageAssetId?.sys?.id || undefined
     };
   } catch (error) {
      
@@ -231,7 +218,36 @@ export async function fetchPostsFromContentful() {
       date,
       slug: fields.slug || '',
       imageAssetId: fields.imageAssetId?.sys?.id || undefined,
-      imageUrl: fields.imageUrl || undefined
     };
   });
 };
+
+
+/**
+ * アセットIDからアセットの完全なURLを取得します。
+ * @param assetId 取得したいアセットのID
+ * @returns アセットのURL文字列、または見つからない場合はnull
+ */
+export async function getAssetUrl(assetId: string): Promise<string | undefined> {
+  try {
+    // client.getAssetメソッドでアセット情報を取得
+    const asset: Asset<undefined> = await contentfulClient.getAsset(assetId);
+
+    // アセット情報からURLを安全に取得
+    // オプショナルチェイニング(?.)を使い、プロパティが存在しない場合のエラーを防ぎます
+    const url = asset.fields.file?.url;
+
+    if (url) {
+      // ContentfulのAPIが返すURLはプロトコルが省略されているため、'https:'を付与
+      const fullUrl = `https:${url}`;
+      console.log(`取得したURL: ${fullUrl}`);
+      return fullUrl;
+    } else {
+      console.warn(`アセットID '${assetId}' にファイルURLが見つかりませんでした。`);
+      return
+    }
+  } catch (error) {
+    console.error(`アセットID '${assetId}' の取得中にエラーが発生しました:`, error);
+    return
+  }
+}
