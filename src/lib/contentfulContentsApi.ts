@@ -328,10 +328,10 @@ export async function getAssetUrl(assetId: string): Promise<string | undefined> 
       return fullUrl;
     } else {
       console.warn(`アセットID '${assetId}' にファイルURLが見つかりませんでした。`);
-      return
+      return undefined;
     }
   } catch (error) {
     console.error(`アセットID '${assetId}' の取得中にエラーが発生しました:`, error);
-    return
+    return undefined;
   }
 }
