@@ -12,13 +12,27 @@ export interface IrregularHour {
   notes?: string;
 }
 
+interface ContentfulItem {
+  fields: {
+    openingTime?: string | Date;
+    openTime?: string;
+    closeTime?: string;
+    isClosed?: boolean;
+    notes?: string;
+  };
+  sys: {
+    id: string;
+  };
+}
+
 export const fetchIrregularHours = async (): Promise<IrregularHour[]> => {
   try {
     const response = await contentfulClient.getEntries({
       content_type: 'openingHours',
       order: ['fields.openingTime'],
     });
-    return response.items.map((item: { fields: Record<string, any>; sys: { id: string } }) => {
+    const today = new Date().toISOString().split('T')[0];
+    const irregularHours = response.items.map((item: ContentfulItem) => {
       const fields = item.fields;
       let dateStr = '';
       if (fields.openingTime) {
@@ -26,8 +40,8 @@ export const fetchIrregularHours = async (): Promise<IrregularHour[]> => {
           dateStr = fields.openingTime.split('T')[0];
         } else if (fields.openingTime instanceof Date) {
           dateStr = fields.openingTime.toISOString().split('T')[0];
-        } else if (fields.openingTime.toString) {
-          dateStr = fields.openingTime.toString().split('T')[0];
+        } else {
+          dateStr = String(fields.openingTime).split('T')[0];
         }
       }
       return {
@@ -38,7 +52,8 @@ export const fetchIrregularHours = async (): Promise<IrregularHour[]> => {
         isClosed: typeof fields.isClosed === 'boolean' ? fields.isClosed : false,
         notes: typeof fields.notes === 'string' ? fields.notes : '',
       };
-    });
+    }).filter((hour: IrregularHour) => hour.date >= today);
+    return irregularHours;
   } catch (error) {
     console.error('Contentful fetch error:', error);
     return [];
