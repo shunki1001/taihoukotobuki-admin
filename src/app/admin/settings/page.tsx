@@ -60,14 +60,13 @@ export default function SettingsPage() {
       if (currentId) {
         // Update
         await updateIrregularHour(currentId, formData);
-        alert('営業時間を更新しました。');
       } else {
         // Create
         await createIrregularHour(formData);
-        alert('営業時間を追加しました。');
       }
-      resetForm();
       await loadHours(); // リストを再読み込み
+      resetForm();
+      alert(currentId ? '営業時間を更新しました。' : '営業時間を追加しました。');
     } catch (err) {
       console.error("Form submission error", err);
       alert(currentId ? '更新に失敗しました。' : '追加に失敗しました。');
@@ -90,8 +89,8 @@ export default function SettingsPage() {
     if (window.confirm('この設定を削除してもよろしいですか？')) {
       try {
         await deleteIrregularHour(id);
-        alert('削除しました。');
         await loadHours();
+        alert('削除しました。');
       } catch (err) {
         console.error("Delete error", err);
         alert('削除に失敗しました。');
