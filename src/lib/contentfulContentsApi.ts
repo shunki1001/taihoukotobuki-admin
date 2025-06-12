@@ -361,7 +361,9 @@ export async function getAssetUrl(
   }
 }
 
-export const deletePostInContentful = async (entryId: string) => {
+export const deletePostInContentful = async (
+  entryId: string
+): Promise<boolean> => {
   const environment = await getEnvironment();
 
   try {

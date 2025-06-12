@@ -12,7 +12,7 @@ export interface IrregularHour {
   notes?: string;
 }
 
-interface ContentfulItem {
+interface OpeningHoursEntry {
   fields: {
     openingTime?: string | Date;
     openTime?: string;
@@ -33,7 +33,7 @@ export const fetchIrregularHours = async (): Promise<IrregularHour[]> => {
     });
     const today = new Date().toISOString().split("T")[0];
     const irregularHours = response.items
-      .map((item: ContentfulItem) => {
+      .map((item: OpeningHoursEntry) => {
         const fields = item.fields;
         let dateStr = "";
         if (fields.openingTime) {
