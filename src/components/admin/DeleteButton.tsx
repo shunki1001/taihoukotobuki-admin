@@ -2,7 +2,7 @@
 
 import React from "react";
 import Button from "@/components/ui/Button";
-import { contentfulManagementClient } from "@/lib/contentfulManagementClient";
+import { deletePostInContentful } from "@/lib/contentfulContentsApi";
 
 type DeleteButtonProps = {
   entryId: string;
@@ -14,23 +14,21 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({ entryId }) => {
     if (!confirm("本当に削除しますか？")) {
       return;
     }
-    try {
-      const space = await contentfulManagementClient.getSpace(process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string);
-      const environment = await space.getEnvironment("master");
-      const entry = await environment.getEntry(entryId);
-      await entry.unpublish();
-      await entry.delete();
-      alert("コンテンツを削除しました。");
-      // 必要に応じてページ遷移や状態更新をここで行う
+    if (await deletePostInContentful(entryId)) {
+      alert("削除に成功しました");
       window.location.reload();
-    } catch (error) {
-      console.error("Failed to delete entry", error);
-      alert("削除に失敗しました。");
+    } else {
+      alert("削除に失敗しました");
     }
   };
 
   return (
-    <Button variant="danger" onClick={handleDelete} size="md" className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
+    <Button
+      variant="danger"
+      onClick={handleDelete}
+      size="md"
+      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="20"

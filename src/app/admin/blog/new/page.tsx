@@ -1,9 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
-import BlogForm from '@/components/admin/BlogForm';
-import { useRouter } from 'next/navigation'; // next/navigationからインポート
-import { createPostInContentful, BlogFormData } from '@/lib/contentfulContentsApi';
+import React, { useState } from "react";
+import BlogForm from "@/components/admin/BlogForm";
+import { useRouter } from "next/navigation"; // next/navigationからインポート
+import {
+  createPostInContentful,
+  BlogFormData,
+} from "@/lib/contentfulContentsApi";
 
 export default function NewBlogPage() {
   const router = useRouter();
@@ -13,18 +16,18 @@ export default function NewBlogPage() {
     setIsSubmitting(true);
     try {
       await createPostInContentful(data);
-      alert('ブログ記事を作成しました。');
-      router.push('/admin/blog'); // 一覧へリダイレクト
+      alert("ブログ記事を作成しました。");
+      router.push("/admin/blog"); // 一覧へリダイレクト
     } catch (error) {
       console.error("Failed to create post", error);
-      alert('記事の作成に失敗しました。');
+      alert("記事の作成に失敗しました。");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    router.push('/admin/blog');
+    router.push("/admin/blog");
   };
 
   return (
