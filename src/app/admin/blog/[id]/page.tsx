@@ -1,19 +1,24 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import BlogForm from '@/components/admin/BlogForm';
-import { useParams, useRouter } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import BlogForm from "@/components/admin/BlogForm";
+import { useParams, useRouter } from "next/navigation";
 
-import { fetchBlogPostById, updatePostInContentful, BlogFormData } from '@/lib/contentfulContentsApi';
-
+import {
+  fetchBlogPostById,
+  updatePostInContentful,
+  BlogFormData,
+} from "@/lib/contentfulContentsApi";
 
 export default function EditBlogPage() {
   const router = useRouter();
   const params = useParams();
-  const id = typeof params.id === 'string' ? params.id : '';
+  const id = typeof params.id === "string" ? params.id : "";
 
-const [initialData, setInitialData] = useState<BlogFormData | undefined>(undefined);
-const [isSubmitting, setIsSubmitting] = useState(false);
+  const [initialData, setInitialData] = useState<BlogFormData | undefined>(
+    undefined
+  );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -26,9 +31,12 @@ const [isSubmitting, setIsSubmitting] = useState(false);
               slug: data.slug,
               publishedDate: data.publishedDate,
               title: data.title,
-              content: typeof data.content === 'string' ? data.content : JSON.stringify(data.content),
+              content:
+                typeof data.content === "string"
+                  ? data.content
+                  : JSON.stringify(data.content),
               status: data.status,
-              imageAssetId: data.imageAssetId
+              imageAssetId: data.imageAssetId,
             };
             setInitialData(uiData);
           } else {
@@ -55,21 +63,21 @@ const [isSubmitting, setIsSubmitting] = useState(false);
         title: data.title,
         content: data.content,
         status: data.status,
-        imageAssetId: data.imageAssetId
+        imageAssetId: data.imageAssetId,
       };
       await updatePostInContentful(id, apiData);
-      alert('ブログ記事を更新しました。');
-      router.push('/admin/blog'); // 一覧へリダイレクト
+      alert("ブログ記事を更新しました。");
+      router.push("/admin/blog"); // 一覧へリダイレクト
     } catch (error) {
       console.error("Failed to update post", error);
-      alert('記事の更新に失敗しました。');
+      alert("記事の更新に失敗しました。");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleCancel = () => {
-    router.push('/admin/blog');
+    router.push("/admin/blog");
   };
 
   return (

@@ -26,7 +26,9 @@ export default function AdminLayout({
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100 dark:bg-gray-900">
         <Card className="p-8">
-          <p className="text-lg text-gray-700 dark:text-gray-300">認証情報を確認中...</p>
+          <p className="text-lg text-gray-700 dark:text-gray-300">
+            認証情報を確認中...
+          </p>
           {/* ここにスピナーなどを追加しても良い */}
         </Card>
       </div>

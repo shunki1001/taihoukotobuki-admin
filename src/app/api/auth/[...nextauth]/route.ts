@@ -3,7 +3,8 @@
 import NextAuth, { AuthOptions } from "next-auth"; // AuthOptions をインポート
 import GoogleProvider from "next-auth/providers/google";
 
-const authOptions: AuthOptions = { // 型を明示
+const authOptions: AuthOptions = {
+  // 型を明示
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID as string,
@@ -19,7 +20,9 @@ const authOptions: AuthOptions = { // 型を明示
           console.error("ALLOWED_EMAILS environment variable is not set.");
           return false; // 環境変数が設定されていなければ全員拒否（セキュリティのため）
         }
-        const allowedEmails = allowedEmailsEnv.split(',').map(email => email.trim().toLowerCase());
+        const allowedEmails = allowedEmailsEnv
+          .split(",")
+          .map((email) => email.trim().toLowerCase());
 
         // ユーザーのメールアドレスが許可リストに含まれているか確認
         if (user.email && allowedEmails.includes(user.email.toLowerCase())) {

@@ -14,16 +14,21 @@ const DeleteButton: React.FC<DeleteButtonProps> = ({ entryId }) => {
     if (!confirm("本当に削除しますか？")) {
       return;
     }
-    if (await deletePostInContentful(entryId)){
-      alert('削除に成功しました')
+    if (await deletePostInContentful(entryId)) {
+      alert("削除に成功しました");
       window.location.reload();
-    }else{
-      alert('削除に失敗しました')
+    } else {
+      alert("削除に失敗しました");
     }
   };
 
   return (
-    <Button variant="danger" onClick={handleDelete} size="md" className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200">
+    <Button
+      variant="danger"
+      onClick={handleDelete}
+      size="md"
+      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-200"
+    >
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="20"
