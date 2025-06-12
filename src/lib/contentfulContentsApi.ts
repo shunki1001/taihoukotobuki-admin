@@ -228,7 +228,7 @@ export const fetchBlogPostById = async (id: string): Promise<BlogFormData | null
       status: hasPublishedAt(entry.sys) ? 'published' : 'draft',
       imageAssetId,
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching blog post by ID:', error);
     return null;
   }
@@ -331,3 +331,25 @@ export async function getAssetUrl(assetId: string): Promise<string | undefined> 
     return undefined;
   }
 }
+
+
+export const deletePostInContentful = async (entryId: string) => {
+  const environment = await getEnvironment();
+
+  try {
+    const entry = await environment.getEntry(entryId);
+    if (entry.isPublished()) {
+      await entry.unpublish();
+    }
+    await entry.delete();
+    return true;
+} catch (error) {
+    if (error && typeof error === 'object' && 'response' in error) {
+      const errObj = error as { response?: { data: unknown } };
+      console.error("Failed to delete entry:", errObj.response?.data ?? error);
+    } else {
+      console.error("Failed to delete entry:", error);
+    }
+    return false;
+}
+};
