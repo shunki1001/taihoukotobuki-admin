@@ -15,7 +15,7 @@ type ContentPosts = {
 };
 
 export default function BlogListPage() {
-  const [posts, setPosts] = useState<ContentPosts[]>();
+  const [posts, setPosts] = useState<ContentPosts[]>([]);
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -27,7 +27,6 @@ export default function BlogListPage() {
         }
       } catch (e) {
         console.error("Failed to fetch blog post", e);
-        console.error("記事の読み込みに失敗しました。");
       }
     };
     loadData();
@@ -90,7 +89,7 @@ export default function BlogListPage() {
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {posts?.map((post) => (
+            {posts.map((post) => (
               <tr key={post.id}>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -141,7 +140,7 @@ export default function BlogListPage() {
             ))}
           </tbody>
         </table>
-        {posts && posts.length === 0 && (
+        {posts.length === 0 && (
           <p className="text-center py-8 text-gray-500 dark:text-gray-400">
             ブログ記事がありません。
           </p>
