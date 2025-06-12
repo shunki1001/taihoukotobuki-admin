@@ -18,7 +18,7 @@ const SimpleBlogEditor: React.FC<SimpleBlogEditorProps> = ({
         onChange={(e) => onChange(e.target.value)}
         rows={15}
         className="w-full p-3 text-base text-gray-800 dark:text-gray-100 bg-white dark:bg-gray-800 focus:outline-none resize-y"
-        placeholder="ブログ本文を入力してください (Markdown形式を想定)..."
+        placeholder="ブログ本文を入力してください。文字のみ入力できます。画像やリンクを本文に入れたい時はお申し付けを！"
       />
     </div>
   );
