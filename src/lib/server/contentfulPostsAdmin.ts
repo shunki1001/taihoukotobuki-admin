@@ -2,11 +2,11 @@
 // Route Handler(src/app/api/admin/posts/**)からのみ呼び出す。クライアントコンポーネントから
 // import しないこと(CONTENTFUL_MANAGEMENT_ACCESS_TOKEN はサーバー環境変数でありクライアントには渡らない)。
 
-import { contentfulManagementClient } from "@/lib/contentfulManagementClient";
+import { getContentfulManagementClient } from "@/lib/contentfulManagementClient";
 import type { BlogFormData, BlogPostSummary } from "@/lib/types/blog";
 
 const getEnvironment = async () => {
-  const space = await contentfulManagementClient.getSpace(
+  const space = await getContentfulManagementClient().getSpace(
     process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string
   );
   return space.getEnvironment("master"); // or your environment id

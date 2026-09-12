@@ -1,5 +1,5 @@
 import { contentfulClient } from "@/lib/contentfulClient";
-import { contentfulManagementClient } from "@/lib/contentfulManagementClient";
+import { getContentfulManagementClient } from "@/lib/contentfulManagementClient";
 
 const spaceId = process.env.NEXT_PUBLIC_CONTENTFUL_SPACE_ID as string;
 
@@ -68,7 +68,7 @@ export const createIrregularHour = async (
   data: Omit<IrregularHour, "id">
 ): Promise<IrregularHour> => {
   try {
-    const space = await contentfulManagementClient.getSpace(spaceId);
+    const space = await getContentfulManagementClient().getSpace(spaceId);
     const environment = await space.getEnvironment("master");
     const entry = await environment.createEntry("openingHours", {
       fields: {
@@ -101,7 +101,7 @@ export const updateIrregularHour = async (
   data: Partial<Omit<IrregularHour, "id">>
 ): Promise<IrregularHour | null> => {
   try {
-    const space = await contentfulManagementClient.getSpace(spaceId);
+    const space = await getContentfulManagementClient().getSpace(spaceId);
     const environment = await space.getEnvironment("master");
     const entry = await environment.getEntry(id);
     if (!entry) return null;
@@ -147,7 +147,7 @@ export const updateIrregularHour = async (
 
 export const deleteIrregularHour = async (id: string): Promise<void> => {
   try {
-    const space = await contentfulManagementClient.getSpace(spaceId);
+    const space = await getContentfulManagementClient().getSpace(spaceId);
     const environment = await space.getEnvironment("master");
     const entry = await environment.getEntry(id);
     if (!entry) return;
