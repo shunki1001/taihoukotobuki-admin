@@ -11,6 +11,21 @@ import {
   uploadImageToContentful,
   getAssetUrl,
 } from "@/lib/contentfulContentsApi";
+import { MAX_IMAGE_UPLOAD_BYTES } from "@/lib/imageUploadLimits";
+
+// クライアント側では早期フィードバック用にファイル種別・サイズをチェックするが、
+// 最終的な検証はサーバー側(実バイナリのマジックナンバー確認)で行う。
+const isAcceptableImageFile = (file: File): string | null => {
+  if (!file.type.startsWith("image/")) {
+    return "画像ファイルを選択してください。";
+  }
+  if (file.size > MAX_IMAGE_UPLOAD_BYTES) {
+    return `ファイルサイズが大きすぎます(上限${
+      MAX_IMAGE_UPLOAD_BYTES / (1024 * 1024)
+    }MB)。`;
+  }
+  return null;
+};
 
 interface BlogFormProps {
   initialData?: Partial<BlogFormData>; // 編集時に初期値を設定
@@ -100,7 +115,11 @@ const BlogForm: React.FC<BlogFormProps> = ({
       const files = e.dataTransfer.files;
       if (files.length === 0) return;
       const file = files[0];
-      if (!file.type.startsWith("image/")) return;
+      const validationError = isAcceptableImageFile(file);
+      if (validationError) {
+        alert(validationError);
+        return;
+      }
 
       setUploading(true);
       try {
@@ -108,7 +127,11 @@ const BlogForm: React.FC<BlogFormProps> = ({
         setImageAssetId(assetId);
       } catch (error) {
         console.error("画像アップロードエラー:", error);
-        alert("画像のアップロードに失敗しました。");
+        alert(
+          error instanceof Error
+            ? error.message
+            : "画像のアップロードに失敗しました。"
+        );
       } finally {
         setUploading(false);
       }
@@ -127,7 +150,11 @@ const BlogForm: React.FC<BlogFormProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
     const file = files[0];
-    if (!file.type.startsWith("image/")) return;
+    const validationError = isAcceptableImageFile(file);
+    if (validationError) {
+      alert(validationError);
+      return;
+    }
 
     setUploading(true);
     try {
@@ -135,7 +162,11 @@ const BlogForm: React.FC<BlogFormProps> = ({
       setImageAssetId(assetId);
     } catch (error) {
       console.error("画像アップロードエラー:", error);
-      alert("画像のアップロードに失敗しました。");
+      alert(
+        error instanceof Error
+          ? error.message
+          : "画像のアップロードに失敗しました。"
+      );
     } finally {
       setUploading(false);
     }

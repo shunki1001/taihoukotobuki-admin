@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireSession } from "@/lib/server/requireSession";
 import { uploadImageToContentful } from "@/lib/server/contentfulPostsAdmin";
+import { validateImageUpload } from "@/lib/server/imageValidation";
 
 export async function POST(request: NextRequest) {
   const { session, response } = await requireSession();
@@ -12,11 +13,12 @@ export async function POST(request: NextRequest) {
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "ファイルがありません。" }, { status: 400 });
   }
-  if (!file.type.startsWith("image/")) {
-    return NextResponse.json(
-      { error: "画像ファイルのみアップロードできます。" },
-      { status: 400 }
-    );
+
+  // file.type(ブラウザ申告のMIMEタイプ)は偽装可能なため、
+  // サーバー側で実バイナリのマジックナンバーとサイズを検証する
+  const validation = await validateImageUpload(file);
+  if (!validation.ok) {
+    return NextResponse.json({ error: validation.reason }, { status: 400 });
   }
 
   try {
