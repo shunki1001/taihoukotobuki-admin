@@ -8,17 +8,32 @@ import type { BlogFormData, BlogPostSummary } from "@/lib/types/blog";
 
 export type { BlogFormData, BlogPostSummary };
 
-const parseErrorMessage = async (
+/**
+ * APIからのエラーレスポンス。サーバー側がContentfulのバリデーションエラーを
+ * フィールド単位に分解できた場合、fieldErrors にフィールド名→メッセージが入る
+ * (スラッグの重複など、どのフィールドが原因かをフォームにインライン表示するため)。
+ */
+export class ApiError extends Error {
+  fieldErrors?: Record<string, string>;
+  constructor(message: string, fieldErrors?: Record<string, string>) {
+    super(message);
+    this.name = "ApiError";
+    this.fieldErrors = fieldErrors;
+  }
+}
+
+const parseErrorResponse = async (
   response: Response,
   fallback: string
-): Promise<string> => {
+): Promise<ApiError> => {
   try {
     const data = await response.json();
-    if (data && typeof data.error === "string") return data.error;
+    const message = typeof data?.error === "string" ? data.error : fallback;
+    return new ApiError(message, data?.fieldErrors);
   } catch {
     // レスポンスがJSONでない場合はfallbackを使う
+    return new ApiError(fallback);
   }
-  return fallback;
 };
 
 export const uploadImageToContentful = async (file: File): Promise<string> => {
@@ -31,9 +46,7 @@ export const uploadImageToContentful = async (file: File): Promise<string> => {
   });
 
   if (!response.ok) {
-    throw new Error(
-      await parseErrorMessage(response, "画像のアップロードに失敗しました。")
-    );
+    throw await parseErrorResponse(response, "画像のアップロードに失敗しました。");
   }
 
   const { assetId } = await response.json();
@@ -50,9 +63,7 @@ export const createPostInContentful = async (
   });
 
   if (!response.ok) {
-    throw new Error(
-      await parseErrorMessage(response, "記事の作成に失敗しました。")
-    );
+    throw await parseErrorResponse(response, "記事の作成に失敗しました。");
   }
 
   return response.json();
@@ -69,9 +80,7 @@ export const updatePostInContentful = async (
   });
 
   if (!response.ok) {
-    throw new Error(
-      await parseErrorMessage(response, "記事の更新に失敗しました。")
-    );
+    throw await parseErrorResponse(response, "記事の更新に失敗しました。");
   }
 
   return response.json();
@@ -92,9 +101,7 @@ export const fetchBlogPostById = async (
 export async function fetchPostsFromContentful(): Promise<BlogPostSummary[]> {
   const response = await fetch("/api/admin/posts");
   if (!response.ok) {
-    throw new Error(
-      await parseErrorMessage(response, "記事一覧の取得に失敗しました。")
-    );
+    throw await parseErrorResponse(response, "記事一覧の取得に失敗しました。");
   }
   return response.json();
 }

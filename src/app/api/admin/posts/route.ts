@@ -4,6 +4,7 @@ import {
   createPostInContentful,
   fetchPostsFromContentful,
 } from "@/lib/server/contentfulPostsAdmin";
+import { parseContentfulFieldErrors } from "@/lib/server/contentfulErrorParser";
 import type { BlogFormData } from "@/lib/types/blog";
 
 export async function GET() {
@@ -33,8 +34,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ id: entry.sys.id }, { status: 201 });
   } catch (error) {
     console.error("Failed to create post:", error);
+    const fieldErrors = parseContentfulFieldErrors(error);
     return NextResponse.json(
-      { error: "記事の作成に失敗しました。" },
+      { error: "記事の作成に失敗しました。", fieldErrors: fieldErrors ?? undefined },
       { status: 500 }
     );
   }

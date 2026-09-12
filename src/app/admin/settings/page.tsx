@@ -15,8 +15,12 @@ import {
   deleteIrregularHour,
   IrregularHour,
 } from "@/lib/contentfulCalendarApi";
+import { useToast } from "@/components/ui/ToastProvider";
+import { useConfirm } from "@/components/ui/ConfirmDialogProvider";
 
 export default function SettingsPage() {
+  const { showToast } = useToast();
+  const confirm = useConfirm();
   const [hours, setHours] = useState<IrregularHour[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,12 +85,16 @@ export default function SettingsPage() {
       }
       await loadHours(); // リストを再読み込み
       resetForm();
-      alert(
-        currentId ? "営業時間を更新しました。" : "営業時間を追加しました。"
+      showToast(
+        currentId ? "営業時間を更新しました。" : "営業時間を追加しました。",
+        "success"
       );
     } catch (err) {
       console.error("Form submission error", err);
-      alert(currentId ? "更新に失敗しました。" : "追加に失敗しました。");
+      showToast(
+        currentId ? "更新に失敗しました。" : "追加に失敗しました。",
+        "error"
+      );
     } finally {
       setIsSubmittingForm(false);
     }
@@ -103,15 +111,19 @@ export default function SettingsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm("この設定を削除してもよろしいですか？")) {
-      try {
-        await deleteIrregularHour(id);
-        await loadHours();
-        alert("削除しました。");
-      } catch (err) {
-        console.error("Delete error", err);
-        alert("削除に失敗しました。");
-      }
+    const confirmed = await confirm({
+      message: "この設定を削除してもよろしいですか?",
+      confirmText: "削除する",
+    });
+    if (!confirmed) return;
+
+    try {
+      await deleteIrregularHour(id);
+      await loadHours();
+      showToast("削除しました。", "success");
+    } catch (err) {
+      console.error("Delete error", err);
+      showToast("削除に失敗しました。", "error");
     }
   };
 

@@ -7,6 +7,8 @@ import Header from "@/components/admin/Header";
 import { useSession } from "next-auth/react";
 import { redirect } from "next/navigation"; // next/navigationからインポート
 import Card from "@/components/ui/Card"; // ローディング表示用にCardをインポート
+import { ToastProvider } from "@/components/ui/ToastProvider";
+import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialogProvider";
 
 export default function AdminLayout({
   children,
@@ -37,15 +39,19 @@ export default function AdminLayout({
 
   if (status === "authenticated") {
     return (
-      <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-        <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <Header setSidebarOpen={setSidebarOpen} />
-          <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
-            {children}
-          </main>
-        </div>
-      </div>
+      <ToastProvider>
+        <ConfirmDialogProvider>
+          <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+            <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Header setSidebarOpen={setSidebarOpen} />
+              <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 dark:bg-gray-900 p-4 md:p-6">
+                {children}
+              </main>
+            </div>
+          </div>
+        </ConfirmDialogProvider>
+      </ToastProvider>
     );
   }
 
