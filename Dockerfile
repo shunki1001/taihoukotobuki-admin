@@ -35,12 +35,19 @@ WORKDIR /app
 # `docker history` / `docker inspect` で復元できてしまうため、
 # Cloud Run実行時にSecret Manager経由で注入する(terraform/main.tf参照)。
 
+# コンテナ内での任意コード実行につながる脆弱性が見つかった場合の被害範囲を狭めるため、
+# rootではなく非rootユーザーでアプリを起動する
+RUN addgroup --system --gid 1001 nodejs \
+  && adduser --system --uid 1001 nextjs
+
 # Copy only necessary files for production
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/next.config.ts ./
+COPY --from=builder --chown=nextjs:nodejs /app/package*.json ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.ts ./
+
+USER nextjs
 
 # Expose port 8080 for Cloud Run
 EXPOSE 8080
