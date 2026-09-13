@@ -12,6 +12,7 @@ import {
   getAssetUrl,
 } from "@/lib/contentfulContentsApi";
 import { MAX_IMAGE_UPLOAD_BYTES } from "@/lib/imageUploadLimits";
+import { useToast } from "@/components/ui/ToastProvider";
 
 // クライアント側では早期フィードバック用にファイル種別・サイズをチェックするが、
 // 最終的な検証はサーバー側(実バイナリのマジックナンバー確認)で行う。
@@ -33,6 +34,8 @@ interface BlogFormProps {
   isSubmitting: boolean;
   submitButtonText?: string;
   onCancel: () => void;
+  // サーバー(Contentful)からのバリデーションエラーをフィールド単位で表示するためのマップ
+  fieldErrors?: Record<string, string>;
 }
 
 const BlogForm: React.FC<BlogFormProps> = ({
@@ -41,7 +44,9 @@ const BlogForm: React.FC<BlogFormProps> = ({
   isSubmitting,
   submitButtonText = "保存する",
   onCancel,
+  fieldErrors,
 }) => {
+  const { showToast } = useToast();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [status, setStatus] = useState<"draft" | "published">("published");
@@ -117,7 +122,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
       const file = files[0];
       const validationError = isAcceptableImageFile(file);
       if (validationError) {
-        alert(validationError);
+        showToast(validationError, "error");
         return;
       }
 
@@ -127,16 +132,17 @@ const BlogForm: React.FC<BlogFormProps> = ({
         setImageAssetId(assetId);
       } catch (error) {
         console.error("画像アップロードエラー:", error);
-        alert(
+        showToast(
           error instanceof Error
             ? error.message
-            : "画像のアップロードに失敗しました。"
+            : "画像のアップロードに失敗しました。",
+          "error"
         );
       } finally {
         setUploading(false);
       }
     },
-    [uploading, isSubmitting]
+    [uploading, isSubmitting, showToast]
   );
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -152,7 +158,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
     const file = files[0];
     const validationError = isAcceptableImageFile(file);
     if (validationError) {
-      alert(validationError);
+      showToast(validationError, "error");
       return;
     }
 
@@ -162,10 +168,11 @@ const BlogForm: React.FC<BlogFormProps> = ({
       setImageAssetId(assetId);
     } catch (error) {
       console.error("画像アップロードエラー:", error);
-      alert(
+      showToast(
         error instanceof Error
           ? error.message
-          : "画像のアップロードに失敗しました。"
+          : "画像のアップロードに失敗しました。",
+        "error"
       );
     } finally {
       setUploading(false);
@@ -219,6 +226,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
               required
               placeholder="記事のタイトル"
               disabled={isSubmitting || uploading}
+              error={fieldErrors?.title}
             />
           </Card>
           <Card title="本文">
@@ -260,6 +268,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
               required
               placeholder="URLスラッグ (ユニーク)"
               disabled={isSubmitting || uploading}
+              error={fieldErrors?.slug}
             />
           </Card>
           <Card title="ブログ画像">
@@ -268,7 +277,32 @@ const BlogForm: React.FC<BlogFormProps> = ({
               onDragOver={handleDragOver}
               className="border-2 border-dashed border-gray-400 rounded-md p-4 text-center cursor-pointer"
             >
-              {imageUrl ? (
+              {uploading ? (
+                <div className="flex flex-col items-center justify-center py-6 gap-2 text-gray-600 dark:text-gray-300">
+                  <svg
+                    className="animate-spin h-6 w-6 text-blue-600"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                    ></path>
+                  </svg>
+                  <p role="status">アップロード中...</p>
+                </div>
+              ) : imageUrl ? (
                 <div className="relative">
                   <img
                     src={imageUrl}
@@ -278,7 +312,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
                   <button
                     type="button"
                     onClick={handleRemoveImage}
-                    disabled={isSubmitting || uploading}
+                    disabled={isSubmitting}
                     className="absolute top-1 right-1 bg-red-500 text-white rounded-full px-2 py-1 text-xs"
                   >
                     削除
@@ -291,7 +325,7 @@ const BlogForm: React.FC<BlogFormProps> = ({
                     type="file"
                     accept="image/*"
                     onChange={handleFileInputChange}
-                    disabled={isSubmitting || uploading}
+                    disabled={isSubmitting}
                     className="hidden"
                     id="imageAssetId"
                   />

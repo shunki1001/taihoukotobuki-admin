@@ -7,18 +7,22 @@ import { useParams, useRouter } from "next/navigation";
 import {
   fetchBlogPostById,
   updatePostInContentful,
+  ApiError,
   BlogFormData,
 } from "@/lib/contentfulContentsApi";
+import { useToast } from "@/components/ui/ToastProvider";
 
 export default function EditBlogPage() {
   const router = useRouter();
   const params = useParams();
   const id = typeof params.id === "string" ? params.id : "";
+  const { showToast } = useToast();
 
   const [initialData, setInitialData] = useState<BlogFormData | undefined>(
     undefined
   );
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>();
 
   useEffect(() => {
     if (id) {
@@ -40,21 +44,22 @@ export default function EditBlogPage() {
             };
             setInitialData(uiData);
           } else {
-            console.error("記事が見つかりませんでした。");
+            showToast("記事が見つかりませんでした。", "error");
           }
         } catch (e) {
           console.error("Failed to fetch blog post", e);
-          console.error("記事の読み込みに失敗しました。");
+          showToast("記事の読み込みに失敗しました。", "error");
         }
       };
       loadData();
     } else {
-      console.error("無効な記事IDです。");
+      showToast("無効な記事IDです。", "error");
     }
-  }, [id]);
+  }, [id, showToast]);
 
   const handleSubmit = async (data: BlogFormData) => {
     setIsSubmitting(true);
+    setFieldErrors(undefined);
     try {
       // UI用のBlogFormData型からContentful API用のBlogFormDataApi型に変換
       const apiData: BlogFormData = {
@@ -66,11 +71,16 @@ export default function EditBlogPage() {
         imageAssetId: data.imageAssetId,
       };
       await updatePostInContentful(id, apiData);
-      alert("ブログ記事を更新しました。");
+      showToast("ブログ記事を更新しました。", "success");
       router.push("/admin/blog"); // 一覧へリダイレクト
     } catch (error) {
       console.error("Failed to update post", error);
-      alert("記事の更新に失敗しました。");
+      const message =
+        error instanceof Error ? error.message : "記事の更新に失敗しました。";
+      showToast(message, "error");
+      if (error instanceof ApiError && error.fieldErrors) {
+        setFieldErrors(error.fieldErrors);
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -91,6 +101,7 @@ export default function EditBlogPage() {
         isSubmitting={isSubmitting}
         submitButtonText="更新する"
         onCancel={handleCancel}
+        fieldErrors={fieldErrors}
       />
     </div>
   );
