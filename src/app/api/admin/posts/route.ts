@@ -5,14 +5,20 @@ import {
   fetchPostsFromContentful,
 } from "@/lib/server/contentfulPostsAdmin";
 import { parseContentfulFieldErrors } from "@/lib/server/contentfulErrorParser";
+import { BLOG_LIST_PAGE_SIZE } from "@/lib/blogPagination";
 import type { BlogFormData } from "@/lib/types/blog";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const { session, response } = await requireSession();
   if (!session) return response;
 
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const limit = BLOG_LIST_PAGE_SIZE;
+  const skip = (page - 1) * limit;
+
   try {
-    const posts = await fetchPostsFromContentful();
+    const posts = await fetchPostsFromContentful({ skip, limit });
     return NextResponse.json(posts);
   } catch (error) {
     console.error("Failed to fetch posts:", error);

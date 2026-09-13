@@ -4,9 +4,13 @@
 
 import { contentfulClient } from "./contentfulClient";
 import type { Asset } from "contentful";
-import type { BlogFormData, BlogPostSummary } from "@/lib/types/blog";
+import type {
+  BlogFormData,
+  BlogPostSummary,
+  PaginatedBlogPosts,
+} from "@/lib/types/blog";
 
-export type { BlogFormData, BlogPostSummary };
+export type { BlogFormData, BlogPostSummary, PaginatedBlogPosts };
 
 /**
  * APIからのエラーレスポンス。サーバー側がContentfulのバリデーションエラーを
@@ -98,8 +102,10 @@ export const fetchBlogPostById = async (
   return response.json();
 };
 
-export async function fetchPostsFromContentful(): Promise<BlogPostSummary[]> {
-  const response = await fetch("/api/admin/posts");
+export async function fetchPostsFromContentful(
+  page = 1
+): Promise<PaginatedBlogPosts> {
+  const response = await fetch(`/api/admin/posts?page=${page}`);
   if (!response.ok) {
     throw await parseErrorResponse(response, "記事一覧の取得に失敗しました。");
   }

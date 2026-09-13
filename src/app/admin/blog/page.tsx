@@ -6,6 +6,7 @@ import Button from "@/components/ui/Button";
 import Card from "@/components/ui/Card";
 import DeleteButton from "@/components/admin/DeleteButton";
 import { fetchPostsFromContentful } from "@/lib/contentfulContentsApi";
+import { BLOG_LIST_PAGE_SIZE } from "@/lib/blogPagination";
 
 type ContentPosts = {
   id: string;
@@ -16,15 +17,19 @@ type ContentPosts = {
 
 export default function BlogListPage() {
   const [posts, setPosts] = useState<ContentPosts[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadPosts = useCallback(async () => {
+  const loadPosts = useCallback(async (targetPage: number) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchPostsFromContentful();
-      setPosts(data);
+      const data = await fetchPostsFromContentful(targetPage);
+      setPosts(data.items);
+      setTotal(data.total);
+      setPage(targetPage);
     } catch (e) {
       console.error("Failed to fetch blog posts", e);
       setError("記事一覧の取得に失敗しました。時間をおいて再度お試しください。");
@@ -34,8 +39,10 @@ export default function BlogListPage() {
   }, []);
 
   useEffect(() => {
-    loadPosts();
+    loadPosts(1);
   }, [loadPosts]);
+
+  const totalPages = Math.max(1, Math.ceil(total / BLOG_LIST_PAGE_SIZE));
 
   return (
     <div>
@@ -75,7 +82,7 @@ export default function BlogListPage() {
       {!isLoading && error && (
         <Card className="text-center py-8">
           <p className="text-red-600 mb-4">{error}</p>
-          <Button variant="secondary" size="sm" onClick={loadPosts}>
+          <Button variant="secondary" size="sm" onClick={() => loadPosts(page)}>
             再試行する
           </Button>
         </Card>
@@ -155,7 +162,10 @@ export default function BlogListPage() {
                       </svg>
                       <span className="sr-only sm:not-sr-only">編集</span>
                     </Link>
-                    <DeleteButton entryId={post.id} onDeleted={loadPosts} />
+                    <DeleteButton
+                      entryId={post.id}
+                      onDeleted={() => loadPosts(page)}
+                    />
                   </td>
                 </tr>
               ))}
@@ -165,6 +175,35 @@ export default function BlogListPage() {
             <p className="text-center py-8 text-gray-500 dark:text-gray-400">
               ブログ記事がありません。
             </p>
+          )}
+          {total > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                全{total}件中 {(page - 1) * BLOG_LIST_PAGE_SIZE + 1}〜
+                {Math.min(page * BLOG_LIST_PAGE_SIZE, total)}件を表示
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => loadPosts(page - 1)}
+                >
+                  前へ
+                </Button>
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => loadPosts(page + 1)}
+                >
+                  次へ
+                </Button>
+              </div>
+            </div>
           )}
         </Card>
       )}
