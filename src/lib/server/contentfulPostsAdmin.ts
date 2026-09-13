@@ -3,7 +3,7 @@
 // import しないこと(CONTENTFUL_MANAGEMENT_ACCESS_TOKEN はサーバー環境変数でありクライアントには渡らない)。
 
 import { getContentfulManagementClient } from "@/lib/contentfulManagementClient";
-import type { BlogFormData, BlogPostSummary } from "@/lib/types/blog";
+import type { BlogFormData, PaginatedBlogPosts } from "@/lib/types/blog";
 
 const getEnvironment = async () => {
   const space = await getContentfulManagementClient().getSpace(
@@ -245,15 +245,20 @@ export const fetchBlogPostById = async (
   }
 };
 
-export async function fetchPostsFromContentful(): Promise<BlogPostSummary[]> {
+export async function fetchPostsFromContentful(
+  options: { skip?: number; limit?: number } = {}
+): Promise<PaginatedBlogPosts> {
+  const { skip = 0, limit = 20 } = options;
   const environment = await getEnvironment();
 
   const response = await environment.getEntries({
     content_type: "pageBlogPost",
     order: "-fields.publishedDate",
+    skip,
+    limit,
   });
 
-  return response.items.map((item) => {
+  const items = response.items.map((item) => {
     const fields = item.fields;
 
     let title = "タイトルなし";
@@ -314,6 +319,8 @@ export async function fetchPostsFromContentful(): Promise<BlogPostSummary[]> {
       imageAssetId,
     };
   });
+
+  return { items, total: response.total, skip, limit };
 }
 
 export const deletePostInContentful = async (

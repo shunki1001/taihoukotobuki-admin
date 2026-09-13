@@ -20,3 +20,10 @@ export interface BlogPostSummary {
   slug: string;
   imageAssetId?: string;
 }
+
+export interface PaginatedBlogPosts {
+  items: BlogPostSummary[];
+  total: number;
+  skip: number;
+  limit: number;
+}
